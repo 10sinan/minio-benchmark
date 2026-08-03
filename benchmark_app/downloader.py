@@ -2,6 +2,8 @@ import os
 import time
 import boto3
 from concurrent.futures import ThreadPoolExecutor
+import metrics
+
 
 def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor):
     tam_yol = os.path.join(indirilecek_klasor, dosya_adi)
@@ -14,7 +16,9 @@ def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor):
         basarili = False
         print(f"HATA: {dosya_adi} indirilemedi - {e}")
     bitis = time.perf_counter()
+
     sure = bitis - baslangic
+    metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="download")
     print(f"İndirildi: {dosya_adi}, süre: {sure:.4f} saniye")
 
 

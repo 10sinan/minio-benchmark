@@ -18,7 +18,7 @@ def upload_single_file(s3, folder_path, bucket_name, dosya_adi):
     bitis = time.perf_counter()
 
     sure = bitis - baslangic
-    metrics.kaydet(dosya_adi, sure, basarili)
+    metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="upload")
     print(f"Yüklendi: {dosya_adi}, süre: {sure:.4f} saniye")
 
 
