@@ -1,8 +1,8 @@
-scenario: datalake       # datalake veya website
-file_count: 10           # kaç dosya üretilecek
-file_size_min_mb: 100    # en küçük dosya boyutu
-file_size_max_mb: 500    # en büyük dosya boyutu
-concurrency: 4           # aynı anda kaç paralel işlem
-operation: both           # upload, download veya both
+scenario: datalake
+file_count: 5
+file_size_min_mb: 5
+file_size_max_mb: 20
+concurrency: 4
+operation: both
 bucket_name: test-bucket
 endpoint_url: http://localhost:9000
