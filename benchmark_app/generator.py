@@ -2,8 +2,8 @@ import os
 import random
 
 def fake_data(file_path, target_size_mb, chunk_size_mb):
-    target_size_bytes = target_size_mb * 1024 * 1024
-    chunk_size_bytes = chunk_size_mb * 1024 * 1024
+    target_size_bytes = int(target_size_mb * 1024 * 1024)
+    chunk_size_bytes = int(chunk_size_mb * 1024 * 1024)
 
     written_bytes = 0
 
