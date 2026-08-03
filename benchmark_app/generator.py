@@ -24,11 +24,11 @@ def generate_files(folder_path, file_count, file_size_min_mb, file_size_max_mb, 
     os.makedirs(folder_path, exist_ok=True)
 
     for i in range(file_count):
-        boyut = random.randint(file_size_min_mb, file_size_max_mb)
+        boyut = random.uniform(file_size_min_mb, file_size_max_mb)
         dosya_adi = f"file_{i}.bin"
         yol = os.path.join(folder_path, dosya_adi)
         fake_data(yol, target_size_mb=boyut, chunk_size_mb=chunk_size_mb)
-        print(f"Üretildi: {dosya_adi}, boyut: {boyut}MB")
+        print(f"Üretildi: {dosya_adi}, boyut: {boyut:.4f}MB")
 
 
 if __name__ == "__main__":
