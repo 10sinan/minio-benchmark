@@ -1,7 +1,7 @@
 scenario: datalake
 file_count: 5
-file_size_min_mb: 5
-file_size_max_mb: 20
+file_size_min_mb: 2
+file_size_max_mb: 100
 concurrency: 4
 operation: both
-bucket_name: test-bucket
+bucket_name: 99999996a
