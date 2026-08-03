@@ -1,5 +1,7 @@
+import os
 import typer
 import yaml
+from dotenv import load_dotenv
 
 import generator
 import uploader
@@ -7,6 +9,7 @@ import downloader
 import metrics
 import reporter
 
+load_dotenv()
 app = typer.Typer(add_completion=False)
 
 
@@ -29,18 +32,18 @@ def run(config: str = "config.yaml"):
     uploader.upload_files(
         folder_path="generated_files",
         bucket_name=settings["bucket_name"],
-        endpoint_url=settings["endpoint_url"],
-        access_key="minioadmin",
-        secret_key="minioadmin",
+        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
         concurrency=settings["concurrency"]
     )
 
     typer.echo("\nDosyalar indiriliyor...")
     downloader.download_files(
         bucket_name=settings["bucket_name"],
-        endpoint_url=settings["endpoint_url"],
-        access_key="minioadmin",
-        secret_key="minioadmin",
+        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
         indirilecek_klasor="downloaded_files",
         concurrency=settings["concurrency"]
     )

@@ -27,7 +27,7 @@ def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key,
         "s3",
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key
+        aws_secret_access_key=secret_key,
     )
 
     dosyalar = os.listdir(folder_path)
@@ -38,10 +38,13 @@ def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key,
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
     upload_files(
         folder_path="generated_files",
         bucket_name="test-bucket",
-        endpoint_url="http://localhost:9000",
-        access_key="minioadmin",
-        secret_key="minioadmin"
+        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
     )

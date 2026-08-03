@@ -5,4 +5,3 @@ file_size_max_mb: 20
 concurrency: 4
 operation: both
 bucket_name: test-bucket
-endpoint_url: http://localhost:9000

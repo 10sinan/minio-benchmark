@@ -27,7 +27,7 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
         "s3",
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key
+        aws_secret_access_key=secret_key,
     )
 
     os.makedirs(indirilecek_klasor, exist_ok=True)
@@ -43,10 +43,13 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
     download_files(
         bucket_name="test-bucket",
-        endpoint_url="http://localhost:9000",
-        access_key="minioadmin",
-        secret_key="minioadmin",
-        indirilecek_klasor="downloaded_files"
+        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        access_key=os.getenv("MINIO_ACCESS_KEY"),
+        secret_key=os.getenv("MINIO_SECRET_KEY"),
+        indirilecek_klasor="downloaded_files",
     )
