@@ -1,6 +1,7 @@
 import os
 import time
 import boto3
+from boto3.session import Config
 from concurrent.futures import ThreadPoolExecutor
 import metrics
 
@@ -28,7 +29,11 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-    )
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required"
+        )
+)
 
     os.makedirs(indirilecek_klasor, exist_ok=True)
 

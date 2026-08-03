@@ -1,6 +1,7 @@
 import os
 import time
 import boto3
+from boto3.session import Config
 from concurrent.futures import ThreadPoolExecutor
 import metrics
 
@@ -28,8 +29,12 @@ def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key,
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
-    )
-
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required"
+        )
+)
+    
     dosyalar = os.listdir(folder_path)
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
