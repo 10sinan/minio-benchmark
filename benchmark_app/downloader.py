@@ -47,6 +47,30 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
             executor.submit(download_single_file, s3, bucket_name, dosya_adi, indirilecek_klasor)
 
 
+
+def list_files(bucket_name, endpoint_url, access_key, secret_key):
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required"
+        )
+    )
+
+    response = s3.list_objects_v2(Bucket=bucket_name)
+
+    dosyalar = []
+    if "Contents" in response:
+        for obj in response["Contents"]:
+            dosyalar.append({"dosya_adi": obj["Key"], "boyut_byte": obj["Size"]})
+
+    return dosyalar
+
+
+
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()

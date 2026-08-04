@@ -1,7 +1,20 @@
-scenario: website
-file_count: 50
-file_size_min_mb: 0.01
-file_size_max_mb: 0.5
-concurrency: 8
-operation: both
 bucket_name: 99999996a
+
+profiles:
+  website:
+    file_count: 100
+    file_size_min_mb: 0.01
+    file_size_max_mb: 0.5
+    concurrency: 4
+
+  datalake:
+    file_count: 5
+    file_size_min_mb: 100
+    file_size_max_mb: 500
+    concurrency: 4
+
+  backup:
+    file_count: 2
+    file_size_min_mb: 500
+    file_size_max_mb: 1000
+    concurrency: 2
