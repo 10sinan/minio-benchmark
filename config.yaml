@@ -1,19 +1,19 @@
 bucket_name: 99999996a
 
 profiles:
-  website:
+  website001-05:
     file_count: 100
     file_size_min_mb: 0.01
     file_size_max_mb: 0.5
     concurrency: 4
 
-  datalake:
+  datalake100-500:
     file_count: 5
     file_size_min_mb: 100
     file_size_max_mb: 500
     concurrency: 4
 
-  backup:
+  backup500-1000:
     file_count: 2
     file_size_min_mb: 500
     file_size_max_mb: 1000
