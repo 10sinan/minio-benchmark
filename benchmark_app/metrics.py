@@ -2,12 +2,14 @@ import queue
 
 sonuc_kuyrugu = queue.Queue()
 
-def kaydet(dosya_adi, sure, basarili, islem_tipi):
+
+def kaydet(dosya_adi, sure, basarili, islem_tipi, boyut_byte=None):
     sonuc_kuyrugu.put({
         "dosya_adi": dosya_adi,
         "sure": sure,
         "basarili": basarili,
-        "islem_tipi": islem_tipi
+        "islem_tipi": islem_tipi,
+        "boyut_byte": boyut_byte,
     })
 
 def tum_sonuclari_al():

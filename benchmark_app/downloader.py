@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import metrics
 
 
-def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor):
+def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_byte=None):
     tam_yol = os.path.join(indirilecek_klasor, dosya_adi)
 
     baslangic = time.perf_counter()
@@ -19,7 +19,7 @@ def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor):
     bitis = time.perf_counter()
 
     sure = bitis - baslangic
-    metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="download")
+    metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="download", boyut_byte=boyut_byte)
     print(f"İndirildi: {dosya_adi}, süre: {sure:.4f} saniye")
 
 
@@ -40,11 +40,18 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
     response = s3.list_objects_v2(Bucket=bucket_name)
     dosyalar = []
     for obj in response["Contents"]:
-        dosyalar.append(obj["Key"])
+        dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        for dosya_adi in dosyalar:
-            executor.submit(download_single_file, s3, bucket_name, dosya_adi, indirilecek_klasor)
+        for dosya in dosyalar:
+            executor.submit(
+                download_single_file,
+                s3,
+                bucket_name,
+                dosya["key"],
+                indirilecek_klasor,
+                dosya["boyut_byte"],
+            )
 
 
 
