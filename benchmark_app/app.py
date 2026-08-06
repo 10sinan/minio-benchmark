@@ -3,6 +3,11 @@ import yaml
 import boto3
 from boto3.session import Config
 
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+import uuid
 import generator
 import uploader
 import downloader
@@ -123,6 +128,44 @@ with sag_kolon:
         disabled=not st.session_state.gelismis_aktif,
     )
 
+    st.markdown("---")
+    st.subheader("Bucket Test Klasörleri")
+
+    def list_prefixes(bucket_name):
+        try:
+            s3 = s3_client_olustur(endpoint, access_key, secret_key)
+            resp = s3.list_objects_v2(Bucket=bucket_name, Delimiter='/')
+            prefixes = [p['Prefix'].rstrip('/') for p in resp.get('CommonPrefixes', [])]
+            return prefixes
+        except Exception as e:
+            logging.warning("Prefix listelenemedi: %s", e)
+            return []
+
+    def delete_prefix(bucket_name, prefix):
+        try:
+            s3 = s3_client_olustur(endpoint, access_key, secret_key)
+            # collect all object keys under the prefix
+            prefix_key = prefix if prefix.endswith('/') else f"{prefix}/"
+            to_delete = []
+            kwargs = {"Bucket": bucket_name, "Prefix": prefix_key}
+            while True:
+                resp = s3.list_objects_v2(**kwargs)
+                for obj in resp.get('Contents', []):
+                    to_delete.append({'Key': obj['Key']})
+                if not resp.get('IsTruncated'):
+                    break
+                kwargs['ContinuationToken'] = resp.get('NextContinuationToken')
+
+            if to_delete:
+                # delete in chunks of 1000
+                for i in range(0, len(to_delete), 1000):
+                    chunk = to_delete[i:i+1000]
+                    s3.delete_objects(Bucket=bucket_name, Delete={'Objects': chunk})
+            return True
+        except Exception as e:
+            logging.exception("Prefix silme hatası: %s", e)
+            return False
+
 
 start_button = st.button("Başlat", use_container_width=True)
 
@@ -156,6 +199,17 @@ if start_button:
                     file_size_max_mb=ayarlar["file_size_max_mb"]
                 )
 
+            # create a unique test prefix and ensure its presence in the bucket
+            test_id = uuid.uuid4().hex[:8]
+            test_prefix = f"test_{test_id}"
+
+            try:
+                s3 = s3_client_olustur(endpoint, access_key, secret_key)
+                # create a placeholder object so the prefix appears in listings
+                s3.put_object(Bucket=bucket_name, Key=f"{test_prefix}/.keep", Body=b"")
+            except Exception:
+                logging.warning("Test prefix olusturulamadi veya zaten mevcut olabilir")
+
             with st.spinner("Dosyalar yükleniyor..."):
                 uploader.upload_files(
                     folder_path="generated_files",
@@ -163,7 +217,8 @@ if start_button:
                     endpoint_url=endpoint,
                     access_key=access_key,
                     secret_key=secret_key,
-                    concurrency=ayarlar["concurrency"]
+                    concurrency=ayarlar["concurrency"],
+                    prefix=test_prefix,
                 )
 
             with st.spinner("Dosyalar indiriliyor..."):
@@ -173,7 +228,8 @@ if start_button:
                     access_key=access_key,
                     secret_key=secret_key,
                     indirilecek_klasor="downloaded_files",
-                    concurrency=ayarlar["concurrency"]
+                    concurrency=ayarlar["concurrency"],
+                    prefix=test_prefix,
                 )
 
             st.success("Benchmark tamamlandı!")
@@ -202,6 +258,20 @@ if start_button:
                 st.write(f"Ortalama süre: {ozet['ortalama_sure']:.4f} sn")
                 st.write(f"En hızlı: {ozet['en_hizli']:.4f} sn")
                 st.write(f"En yavaş: {ozet['en_yavas']:.4f} sn")
+                # Throughput metrics (MB/s)
+                try:
+                    toplam_th = ozet.get("toplam_throughput_mb_s", 0.0)
+                    upload_th = ozet.get("upload_throughput_mb_s", 0.0)
+                    download_th = ozet.get("download_throughput_mb_s", 0.0)
+                    st.metric("Toplam Throughput (MB/s)", f"{toplam_th:.2f}")
+                    th_col1, th_col2 = st.columns(2)
+                    with th_col1:
+                        st.metric("Upload Throughput (MB/s)", f"{upload_th:.2f}")
+                    with th_col2:
+                        st.metric("Download Throughput (MB/s)", f"{download_th:.2f}")
+                except Exception:
+                    # Safety: if summary lacks throughput keys, skip
+                    pass
 
             with detay_kolon:
                 st.subheader("Detaylı Sonuçlar")
@@ -214,3 +284,26 @@ if start_button:
                 with download_kolon:
                     st.caption("Download sonuçları")
                     st.dataframe(download_df, use_container_width=True)
+
+    # Render current prefixes and delete buttons in the right column area
+    try:
+        if bucket_name and endpoint and access_key and secret_key:
+            prefixes = list_prefixes(bucket_name)
+            if prefixes:
+                st.write("Mevcut test klasörleri:")
+                for p in prefixes:
+                    cols = st.columns([3, 1])
+                    cols[0].write(p)
+                    if cols[1].button("Sil", key=f"del_{p}"):
+                        if delete_prefix(bucket_name, p):
+                            st.success(f"{p} silindi")
+                        else:
+                            st.error(f"{p} silinemedi")
+                        # refresh the page to update list
+                        rerun_fn = getattr(st, "experimental_rerun", None)
+                        if callable(rerun_fn):
+                            rerun_fn()
+            else:
+                st.write("Hiç test klasörü bulunamadı.")
+    except Exception:
+        pass

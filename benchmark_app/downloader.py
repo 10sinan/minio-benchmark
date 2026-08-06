@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 import boto3
 from boto3.session import Config
 from concurrent.futures import ThreadPoolExecutor
@@ -7,7 +8,9 @@ import metrics
 
 
 def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_byte=None):
-    tam_yol = os.path.join(indirilecek_klasor, dosya_adi)
+    # dosya_adi may include a prefix (folder); save only the basename locally
+    local_name = os.path.basename(dosya_adi)
+    tam_yol = os.path.join(indirilecek_klasor, local_name)
 
     baslangic = time.perf_counter()
     try:
@@ -15,15 +18,15 @@ def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_b
         basarili = True
     except Exception as e:
         basarili = False
-        print(f"HATA: {dosya_adi} indirilemedi - {e}")
+        logging.exception("HATA: %s indirilemedi - %s", dosya_adi, e)
     bitis = time.perf_counter()
 
     sure = bitis - baslangic
     metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="download", boyut_byte=boyut_byte)
-    print(f"İndirildi: {dosya_adi}, süre: {sure:.4f} saniye")
+    logging.info("İndirildi: %s, süre: %.4f saniye", dosya_adi, sure)
 
 
-def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilecek_klasor, concurrency=4):
+def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilecek_klasor, concurrency=4, prefix=None):
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
@@ -37,10 +40,16 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
 
     os.makedirs(indirilecek_klasor, exist_ok=True)
 
-    response = s3.list_objects_v2(Bucket=bucket_name)
+    # List objects under the prefix if provided
+    list_kwargs = {"Bucket": bucket_name}
+    if prefix:
+        list_kwargs["Prefix"] = prefix if prefix.endswith("/") else f"{prefix}/"
+
+    response = s3.list_objects_v2(**list_kwargs)
     dosyalar = []
-    for obj in response["Contents"]:
-        dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
+    if "Contents" in response:
+        for obj in response["Contents"]:
+            dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         for dosya in dosyalar:

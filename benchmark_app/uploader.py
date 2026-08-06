@@ -1,30 +1,32 @@
 import os
 import time
+import logging
 import boto3
 from boto3.session import Config
 from concurrent.futures import ThreadPoolExecutor
 import metrics
 
 
-def upload_single_file(s3, folder_path, bucket_name, dosya_adi):
+def upload_single_file(s3, folder_path, bucket_name, dosya_adi, prefix=None):
     tam_yol = os.path.join(folder_path, dosya_adi)
     boyut_byte = os.path.getsize(tam_yol)
 
     baslangic = time.perf_counter()
     try:
-        s3.upload_file(tam_yol, bucket_name, dosya_adi)
+        key = f"{prefix}/{dosya_adi}" if prefix else dosya_adi
+        s3.upload_file(tam_yol, bucket_name, key)
         basarili = True
     except Exception as e:
         basarili = False
-        print(f"HATA: {dosya_adi} yüklenemedi - {e}")
+        logging.exception("HATA: %s yüklenemedi - %s", dosya_adi, e)
     bitis = time.perf_counter()
 
     sure = bitis - baslangic
     metrics.kaydet(dosya_adi, sure, basarili, islem_tipi="upload", boyut_byte=boyut_byte)
-    print(f"Yüklendi: {dosya_adi}, süre: {sure:.4f} saniye")
+    logging.info("Yüklendi: %s (prefix=%s), süre: %.4f saniye", dosya_adi, prefix, sure)
 
 
-def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key, concurrency=4):
+def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key, concurrency=4, prefix=None):
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
@@ -40,7 +42,7 @@ def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key,
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         for dosya_adi in dosyalar:
-            executor.submit(upload_single_file, s3, folder_path, bucket_name, dosya_adi)
+            executor.submit(upload_single_file, s3, folder_path, bucket_name, dosya_adi, prefix)
 
 
 if __name__ == "__main__":
