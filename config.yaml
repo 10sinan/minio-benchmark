@@ -6,15 +6,30 @@ profiles:
     file_size_min_mb: 0.01
     file_size_max_mb: 0.5
     concurrency: 4
+    thresholds:
+      latency_iyi_sn: 0.5
+      latency_orta_sn: 1.5
+      throughput_iyi_mb_s: 3
+      throughput_orta_mb_s: 1
 
   datalake100-500:
     file_count: 5
     file_size_min_mb: 100
     file_size_max_mb: 500
     concurrency: 4
+    thresholds:
+      latency_iyi_sn: 5
+      latency_orta_sn: 15
+      throughput_iyi_mb_s: 20
+      throughput_orta_mb_s: 8
 
   backup500-1000:
     file_count: 2
     file_size_min_mb: 500
     file_size_max_mb: 1000
     concurrency: 2
+    thresholds:
+      latency_iyi_sn: 10
+      latency_orta_sn: 30
+      throughput_iyi_mb_s: 25
+      throughput_orta_mb_s: 10
