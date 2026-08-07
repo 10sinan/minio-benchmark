@@ -2,6 +2,9 @@ import queue
 
 sonuc_kuyrugu = queue.Queue()
 
+def kuyrugu_temizle():
+    with sonuc_kuyrugu.mutex:
+        sonuc_kuyrugu.queue.clear()
 
 def kaydet(dosya_adi, sure, basarili, islem_tipi, boyut_byte=None):
     sonuc_kuyrugu.put({

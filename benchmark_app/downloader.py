@@ -8,7 +8,6 @@ import metrics
 
 
 def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_byte=None):
-    # dosya_adi may include a prefix (folder); save only the basename locally
     local_name = os.path.basename(dosya_adi)
     tam_yol = os.path.join(indirilecek_klasor, local_name)
 
@@ -26,7 +25,7 @@ def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_b
     logging.info("İndirildi: %s, süre: %.4f saniye", dosya_adi, sure)
 
 
-def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilecek_klasor, concurrency=4, prefix=None):
+def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilecek_klasor, concurrency=4, prefix=None, iptal_kontrol=None):
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
@@ -34,13 +33,13 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
         aws_secret_access_key=secret_key,
         config=Config(
             request_checksum_calculation="when_required",
-            response_checksum_validation="when_required"
+            response_checksum_validation="when_required",
+            max_pool_connections=50
         )
-)
+    )
 
     os.makedirs(indirilecek_klasor, exist_ok=True)
 
-    # List objects under the prefix if provided
     list_kwargs = {"Bucket": bucket_name}
     if prefix:
         list_kwargs["Prefix"] = prefix if prefix.endswith("/") else f"{prefix}/"
@@ -53,6 +52,9 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         for dosya in dosyalar:
+            if iptal_kontrol and iptal_kontrol():
+                logging.info("İndirme iptal edildi, kalan dosyalar atlanıyor.")
+                break
             executor.submit(
                 download_single_file,
                 s3,
@@ -61,7 +63,6 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
                 indirilecek_klasor,
                 dosya["boyut_byte"],
             )
-
 
 
 def list_files(bucket_name, endpoint_url, access_key, secret_key):
@@ -84,7 +85,6 @@ def list_files(bucket_name, endpoint_url, access_key, secret_key):
             dosyalar.append({"dosya_adi": obj["Key"], "boyut_byte": obj["Size"]})
 
     return dosyalar
-
 
 
 if __name__ == "__main__":

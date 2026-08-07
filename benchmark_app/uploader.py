@@ -26,7 +26,7 @@ def upload_single_file(s3, folder_path, bucket_name, dosya_adi, prefix=None):
     logging.info("Yüklendi: %s (prefix=%s), süre: %.4f saniye", dosya_adi, prefix, sure)
 
 
-def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key, concurrency=4, prefix=None):
+def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key, concurrency=4, prefix=None, iptal_kontrol=None):
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
@@ -34,14 +34,18 @@ def upload_files(folder_path, bucket_name, endpoint_url, access_key, secret_key,
         aws_secret_access_key=secret_key,
         config=Config(
             request_checksum_calculation="when_required",
-            response_checksum_validation="when_required"
+            response_checksum_validation="when_required",
+            max_pool_connections=50
         )
-)
-    
+    )
+
     dosyalar = os.listdir(folder_path)
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         for dosya_adi in dosyalar:
+            if iptal_kontrol and iptal_kontrol():
+                logging.info("Yükleme iptal edildi, kalan dosyalar atlanıyor.")
+                break
             executor.submit(upload_single_file, s3, folder_path, bucket_name, dosya_adi, prefix)
 
 
