@@ -2,7 +2,7 @@ import streamlit as st
 import yaml
 import uuid
 import logging
-
+import reporter
 import generator
 import s3_utils
 import actions
@@ -129,6 +129,10 @@ def render():
             st.write(f"Başarılı: {ozet['basarili']} | Hatalı: {ozet['hatali']}")
             st.write(f"Ortalama süre: {ozet['ortalama_sure']:.4f} sn")
             st.write(f"En hızlı: {ozet['en_hizli']:.4f} sn | En yavaş: {ozet['en_yavas']:.4f} sn")
+            st.write(f"P95: {ozet['p95']:.4f} sn | P99: {ozet['p99']:.4f} sn")
+
+            durum = reporter.durum_degerlendir(ozet)
+            st.write(f"**Değerlendirme:** Gecikme: {durum['latency_durum']} | Başarı: {durum['basari_durum']} (%{durum['basari_orani']:.1f}) | Throughput: {durum['throughput_durum']}")
 
             toplam_th = ozet.get("toplam_throughput_mb_s")
             upload_th = ozet.get("upload_throughput_mb_s")
