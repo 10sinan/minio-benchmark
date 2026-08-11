@@ -1,19 +1,54 @@
+"""
+actions.py — Benchmark orkestrasyonu.
+
+Sırasıyla:
+  1. Dosya üretimi (generator)
+  2. Upload + Multipart Upload (uploader)
+  3. Download (downloader)
+  4. Metadata benchmark — ListObjectsV2 + HeadObject (metadata_ops)
+
+Delete (deleter) ayrı bir kullanıcı aksiyonuyla tetiklenir,
+bu fonksiyona dahil değildir.
+"""
 import logging
+
 import generator
 import uploader
 import downloader
+import metadata_ops
 import metrics
 import reporter
 
-def run_benchmark(ayarlar, endpoint, access_key, secret_key, bucket_name, test_prefix,
-                  folder_path="generated_files", indirilecek_klasor="downloaded_files",
-                  iptal_kontrol=None):
-    
-    # Eski metrikleri temizle
-    metrics.kuyrugu_temizle()
-    
-    logging.info("Benchmark başlatılıyor: prefix=%s, file_count=%s", test_prefix, ayarlar.get("file_count"))
 
+def run_benchmark(
+    ayarlar,
+    endpoint,
+    access_key,
+    secret_key,
+    bucket_name,
+    test_prefix,
+    folder_path="generated_files",
+    indirilecek_klasor="downloaded_files",
+    iptal_kontrol=None,
+):
+    """
+    Tam benchmark akışını çalıştırır.
+
+    Returns
+    -------
+    tuple : (df, ozet, upload_df, download_df)
+    """
+    # Önceki metrikleri temizle
+    metrics.kuyrugu_temizle()
+
+    logging.info(
+        "Benchmark başlatılıyor: prefix=%s, file_count=%s",
+        test_prefix,
+        ayarlar.get("file_count"),
+    )
+
+    # ── Adım 1: Dosya Üretimi ────────────────────────────────────────────────
+    metrics.set_status("Dosyalar üretiliyor…")
     generator.generate_files(
         folder_path=folder_path,
         file_count=ayarlar["file_count"],
@@ -21,6 +56,11 @@ def run_benchmark(ayarlar, endpoint, access_key, secret_key, bucket_name, test_p
         file_size_max_mb=ayarlar["file_size_max_mb"],
     )
 
+    if iptal_kontrol and iptal_kontrol():
+        logging.info("Benchmark iptal edildi (dosya üretiminden sonra).")
+        return _bos_sonuc()
+
+    # ── Adım 2: Upload (+ Multipart kıyaslaması) ─────────────────────────────
     uploader.upload_files(
         folder_path=folder_path,
         bucket_name=bucket_name,
@@ -32,6 +72,11 @@ def run_benchmark(ayarlar, endpoint, access_key, secret_key, bucket_name, test_p
         iptal_kontrol=iptal_kontrol,
     )
 
+    if iptal_kontrol and iptal_kontrol():
+        logging.info("Benchmark iptal edildi (upload sonrası).")
+        return _sonuc_topla(test_prefix)
+
+    # ── Adım 3: Download ─────────────────────────────────────────────────────
     downloader.download_files(
         bucket_name=bucket_name,
         endpoint_url=endpoint,
@@ -43,24 +88,65 @@ def run_benchmark(ayarlar, endpoint, access_key, secret_key, bucket_name, test_p
         iptal_kontrol=iptal_kontrol,
     )
 
+    if iptal_kontrol and iptal_kontrol():
+        logging.info("Benchmark iptal edildi (download sonrası).")
+        return _sonuc_topla(test_prefix)
+
+    # ── Adım 4: Metadata benchmark — List + Head ─────────────────────────────
+    metadata_ops.benchmark_list_objects(
+        bucket_name=bucket_name,
+        endpoint_url=endpoint,
+        access_key=access_key,
+        secret_key=secret_key,
+        prefix=test_prefix,
+        tekrar=10,
+    )
+
+    if not (iptal_kontrol and iptal_kontrol()):
+        metadata_ops.benchmark_head_object(
+            bucket_name=bucket_name,
+            endpoint_url=endpoint,
+            access_key=access_key,
+            secret_key=secret_key,
+            prefix=test_prefix,
+            concurrency=ayarlar.get("concurrency", 4),
+        )
+
+    metrics.set_status("Tamamlandı")
+    logging.info("Benchmark tamamlandı: prefix=%s", test_prefix)
+    return _sonuc_topla(test_prefix)
+
+
+# ── Yardımcı fonksiyonlar ────────────────────────────────────────────────────
+
+def _bos_sonuc():
+    import pandas as pd
+    df = pd.DataFrame()
+    return df, reporter.ozet_cikar(df), df.copy(), df.copy()
+
+
+def _sonuc_topla(test_prefix):
+    """
+    Toplanan metrikleri reporter'dan geçirir ve UI'ya dönecek
+    tuple'ı oluşturur.
+    """
     sonuclar = metrics.tum_sonuclari_al()
     df = reporter.tabloya_cevir(sonuclar)
     ozet = reporter.ozet_cikar(df)
 
     if df.empty:
-        upload_df = df.copy()
-        download_df = df.copy()
-    else:
-        upload_df = df[df["islem_tipi"] == "upload"].copy()
-        download_df = df[df["islem_tipi"] == "download"].copy()
+        return df, ozet, df.copy(), df.copy()
 
-        if "boyut_byte" in upload_df.columns:
-            upload_df["boyut_mb"] = upload_df["boyut_byte"] / (1024 * 1024)
-            upload_df = upload_df.drop(columns=["boyut_byte"])
+    upload_df = _filtrele_ve_mb(df, "upload")
+    download_df = _filtrele_ve_mb(df, "download")
 
-        if "boyut_byte" in download_df.columns:
-            download_df["boyut_mb"] = download_df["boyut_byte"] / (1024 * 1024)
-            download_df = download_df.drop(columns=["boyut_byte"])
-
-    logging.info("Benchmark tamamlandi: prefix=%s", test_prefix)
     return df, ozet, upload_df, download_df
+
+
+def _filtrele_ve_mb(df, islem_tipi):
+    """Verilen işlem tipini filtreler ve boyut_byte sütununu MB'a çevirir."""
+    alt = df[df["islem_tipi"] == islem_tipi].copy()
+    if "boyut_byte" in alt.columns:
+        alt["boyut_mb"] = alt["boyut_byte"] / (1024 * 1024)
+        alt = alt.drop(columns=["boyut_byte"])
+    return alt

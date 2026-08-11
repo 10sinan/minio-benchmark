@@ -1,6 +1,15 @@
+"""
+reporter.py — Metrik analizi ve özet raporlama.
+
+Yeni işlem tipleri: 'multipart_upload', 'list_objects', 'head_object', 'delete'
+"""
 import pandas as pd
 from rich.console import Console
 from rich.table import Table
+
+# İşlem tipleri (UI'da gösterilecek sırada)
+THROUGHPUT_TIPLER = ["upload", "download", "multipart_upload"]
+OPS_TIPLER = ["list_objects", "head_object", "delete"]
 
 
 def tabloya_cevir(sonuclar):
@@ -19,7 +28,9 @@ def sozel_ozet(ozet, durum):
     elif durum.get("basari_durum") == "Mükemmel":
         cumleler.append("Tüm dosyalar başarıyla işlendi, sistem güvenilir çalışıyor.")
     else:
-        cumleler.append(f"Dosyaların %{durum.get('basari_orani', 0):.1f}'i başarılı oldu, küçük bir hata oranı var.")
+        cumleler.append(
+            f"Dosyaların %{durum.get('basari_orani', 0):.1f}'i başarılı oldu, küçük bir hata oranı var."
+        )
 
     if durum.get("latency_durum") == "İyi":
         cumleler.append("Gecikme süreleri düşük, sistem hızlı yanıt veriyor.")
@@ -43,51 +54,86 @@ def sozel_ozet(ozet, durum):
         elif download_th > upload_th * 1.3:
             cumleler.append("İndirme, yüklemeden belirgin şekilde daha hızlı.")
 
+    mp_th = ozet.get("multipart_upload_throughput_mb_s")
+    up_th = ozet.get("upload_throughput_mb_s")
+    if mp_th and up_th:
+        if mp_th > up_th * 1.15:
+            cumleler.append(
+                f"Multipart Upload ({mp_th:.1f} MB/s), standart PutObject'ten "
+                f"yaklaşık %{((mp_th / up_th) - 1) * 100:.0f} daha hızlı."
+            )
+        elif up_th > mp_th * 1.15:
+            cumleler.append(
+                f"Standart PutObject ({up_th:.1f} MB/s), Multipart Upload'dan "
+                f"yaklaşık %{((up_th / mp_th) - 1) * 100:.0f} daha hızlı."
+            )
+        else:
+            cumleler.append("Multipart Upload ve standart PutObject hızları birbirine yakın.")
+
     return " ".join(cumleler)
+
+
+def _calc_mb_per_s(bytes_: int, seconds: float) -> float:
+    if seconds and seconds > 0:
+        return (bytes_ / (1024 * 1024)) / seconds
+    return 0.0
+
+
+def _throughput_for_type(df, islem_tipi: str) -> float:
+    """Verilen işlem tipi için toplam throughput (MB/s) hesaplar."""
+    inc = df[(df["islem_tipi"] == islem_tipi) & df["boyut_byte"].notna()]
+    if inc.empty:
+        return 0.0
+    return _calc_mb_per_s(int(inc["boyut_byte"].sum()), float(inc["sure"].sum()))
+
+
+def _ops_per_sec_for_type(df, islem_tipi: str) -> float:
+    """Verilen işlem tipi için ops/sn hesaplar (metadata ve delete için)."""
+    sub = df[df["islem_tipi"] == islem_tipi]
+    if sub.empty:
+        return 0.0
+    toplam_sure = float(sub["sure"].sum())
+    return len(sub) / toplam_sure if toplam_sure > 0 else 0.0
 
 
 def ozet_cikar(df):
     if df.empty:
         return {
-            "toplam_dosya": 0, "basarili": 0, "hatali": 0,
-            "ortalama_sure": 0.0, "en_yavas": 0.0, "en_hizli": 0.0,
-            "toplam_sure": 0.0, "toplam_throughput_mb_s": 0.0,
-            "upload_throughput_mb_s": 0.0, "download_throughput_mb_s": 0.0,
-            "p95": 0.0, "p99": 0.0,
+            "toplam_dosya": 0,
+            "basarili": 0,
+            "hatali": 0,
+            "ortalama_sure": 0.0,
+            "en_yavas": 0.0,
+            "en_hizli": 0.0,
+            "toplam_sure": 0.0,
+            "toplam_throughput_mb_s": 0.0,
+            "upload_throughput_mb_s": 0.0,
+            "download_throughput_mb_s": 0.0,
+            "multipart_upload_throughput_mb_s": 0.0,
+            "list_objects_ops_per_sec": 0.0,
+            "head_object_ops_per_sec": 0.0,
+            "delete_ops_per_sec": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
         }
-        
+
+    # Temel istatistikler (tüm işlem tipleri dahil)
     toplam_dosya = len(df)
-    basarili_sayisi = df["basarili"].sum()
+    basarili_sayisi = int(df["basarili"].sum())
     hatali_sayisi = toplam_dosya - basarili_sayisi
-    ortalama_sure = df["sure"].mean()
-    en_yavas = df["sure"].max()
-    en_hizli = df["sure"].min()
-    toplam_sure = df["sure"].sum()
-    
+    ortalama_sure = float(df["sure"].mean())
+    en_yavas = float(df["sure"].max())
+    en_hizli = float(df["sure"].min())
+    toplam_sure = float(df["sure"].sum())
+
+    p95 = float(df["sure"].quantile(0.95))
+    p99 = float(df["sure"].quantile(0.99))
+
+    # Throughput hesapları (yalnızca boyut_byte olan satırlar)
     included = df[df["boyut_byte"].notna()] if "boyut_byte" in df.columns else df.iloc[0:0]
     toplam_bayt = int(included["boyut_byte"].sum()) if not included.empty else 0
     toplam_zaman = float(included["sure"].sum()) if not included.empty else 0.0
-
-    def _calc_mb_per_s(bytes_, seconds):
-        if seconds and seconds > 0:
-            return (bytes_ / (1024 * 1024)) / seconds
-        return 0.0
-
     toplam_throughput_mb_s = _calc_mb_per_s(toplam_bayt, toplam_zaman)
-
-    upload_inc = included[included["islem_tipi"] == "upload"] if not included.empty else included
-    download_inc = included[included["islem_tipi"] == "download"] if not included.empty else included
-
-    upload_bayt = int(upload_inc["boyut_byte"].sum()) if not upload_inc.empty else 0
-    upload_zaman = float(upload_inc["sure"].sum()) if not upload_inc.empty else 0.0
-    upload_throughput_mb_s = _calc_mb_per_s(upload_bayt, upload_zaman)
-
-    download_bayt = int(download_inc["boyut_byte"].sum()) if not download_inc.empty else 0
-    download_zaman = float(download_inc["sure"].sum()) if not download_inc.empty else 0.0
-    download_throughput_mb_s = _calc_mb_per_s(download_bayt, download_zaman)
-
-    p95 = df["sure"].quantile(0.95)
-    p99 = df["sure"].quantile(0.99)
 
     return {
         "toplam_dosya": toplam_dosya,
@@ -98,8 +144,14 @@ def ozet_cikar(df):
         "en_hizli": en_hizli,
         "toplam_sure": toplam_sure,
         "toplam_throughput_mb_s": toplam_throughput_mb_s,
-        "upload_throughput_mb_s": upload_throughput_mb_s,
-        "download_throughput_mb_s": download_throughput_mb_s,
+        # Per-type throughput (MB/s)
+        "upload_throughput_mb_s": _throughput_for_type(df, "upload"),
+        "download_throughput_mb_s": _throughput_for_type(df, "download"),
+        "multipart_upload_throughput_mb_s": _throughput_for_type(df, "multipart_upload"),
+        # Metadata ops/sec
+        "list_objects_ops_per_sec": _ops_per_sec_for_type(df, "list_objects"),
+        "head_object_ops_per_sec": _ops_per_sec_for_type(df, "head_object"),
+        "delete_ops_per_sec": _ops_per_sec_for_type(df, "delete"),
         "p95": p95,
         "p99": p99,
     }
@@ -111,7 +163,7 @@ def durum_degerlendir(ozet, thresholds):
             "latency_durum": "Bilinmiyor",
             "basari_durum": "Bilinmiyor",
             "throughput_durum": "Bilinmiyor",
-            "basari_orani": 0.0
+            "basari_orani": 0.0,
         }
 
     p95 = ozet["p95"]
@@ -142,7 +194,7 @@ def durum_degerlendir(ozet, thresholds):
         "latency_durum": latency_durum,
         "basari_durum": basari_durum,
         "throughput_durum": throughput_durum,
-        "basari_orani": basari_orani
+        "basari_orani": basari_orani,
     }
 
 
@@ -158,17 +210,33 @@ def terminalde_goster(df, ozet):
     if not df.empty:
         for _, satir in df.iterrows():
             durum = "✅ Başarılı" if satir["basarili"] else "❌ Hatalı"
-            table.add_row(satir["dosya_adi"], satir["islem_tipi"], f"{satir['sure']:.4f}", durum)
+            table.add_row(
+                satir["dosya_adi"],
+                satir["islem_tipi"],
+                f"{satir['sure']:.4f}",
+                durum,
+            )
 
     console.print(table)
-
-    console.print(f"\n[bold]Özet:[/bold]")
+    console.print("\n[bold]Özet:[/bold]")
     console.print(f"Toplam dosya: {ozet.get('toplam_dosya', 0)}")
     console.print(f"Başarılı: {ozet.get('basarili', 0)} | Hatalı: {ozet.get('hatali', 0)}")
     console.print(f"Ortalama süre: {ozet.get('ortalama_sure', 0):.4f} sn")
-    console.print(f"En hızlı: {ozet.get('en_hizli', 0):.4f} sn | En yavaş: {ozet.get('en_yavas', 0):.4f} sn")
+    console.print(
+        f"En hızlı: {ozet.get('en_hizli', 0):.4f} sn | "
+        f"En yavaş: {ozet.get('en_yavas', 0):.4f} sn"
+    )
     console.print(f"Toplam süre: {ozet.get('toplam_sure', 0):.4f} sn")
-    
+
     if "toplam_throughput_mb_s" in ozet:
         console.print(f"Toplam Throughput: {ozet['toplam_throughput_mb_s']:.4f} MB/s")
-        console.print(f"Upload Throughput: {ozet.get('upload_throughput_mb_s', 0):.4f} MB/s | Download Throughput: {ozet.get('download_throughput_mb_s', 0):.4f} MB/s")
+        console.print(
+            f"Upload: {ozet.get('upload_throughput_mb_s', 0):.4f} MB/s | "
+            f"Download: {ozet.get('download_throughput_mb_s', 0):.4f} MB/s | "
+            f"Multipart: {ozet.get('multipart_upload_throughput_mb_s', 0):.4f} MB/s"
+        )
+        console.print(
+            f"List ops/sn: {ozet.get('list_objects_ops_per_sec', 0):.2f} | "
+            f"Head ops/sn: {ozet.get('head_object_ops_per_sec', 0):.2f} | "
+            f"Delete ops/sn: {ozet.get('delete_ops_per_sec', 0):.2f}"
+        )

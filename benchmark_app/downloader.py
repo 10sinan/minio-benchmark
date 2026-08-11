@@ -1,10 +1,30 @@
+"""
+downloader.py — Paralel dosya indirme modülü.
+
+Değişiklik: metrics.set_status ile aşama bildirimi eklendi.
+"""
 import os
 import time
 import logging
 import boto3
 from boto3.session import Config
 from concurrent.futures import ThreadPoolExecutor
+
 import metrics
+
+
+def _s3_client(endpoint_url, access_key, secret_key):
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+            max_pool_connections=50,
+        ),
+    )
 
 
 def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_byte=None):
@@ -25,19 +45,18 @@ def download_single_file(s3, bucket_name, dosya_adi, indirilecek_klasor, boyut_b
     logging.info("İndirildi: %s, süre: %.4f saniye", dosya_adi, sure)
 
 
-def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilecek_klasor, concurrency=4, prefix=None, iptal_kontrol=None):
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=Config(
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required",
-            max_pool_connections=50
-        )
-    )
-
+def download_files(
+    bucket_name,
+    endpoint_url,
+    access_key,
+    secret_key,
+    indirilecek_klasor,
+    concurrency=4,
+    prefix=None,
+    iptal_kontrol=None,
+):
+    metrics.set_status("Download yapılıyor…")
+    s3 = _s3_client(endpoint_url, access_key, secret_key)
     os.makedirs(indirilecek_klasor, exist_ok=True)
 
     list_kwargs = {"Bucket": bucket_name}
@@ -48,7 +67,9 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
     dosyalar = []
     if "Contents" in response:
         for obj in response["Contents"]:
-            dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
+            # Yalnızca ana yükleme dosyaları indirilsin, _mp kopyaları değil
+            if not obj["Key"].endswith("_mp"):
+                dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
 
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         for dosya in dosyalar:
@@ -63,32 +84,22 @@ def download_files(bucket_name, endpoint_url, access_key, secret_key, indirilece
                 indirilecek_klasor,
                 dosya["boyut_byte"],
             )
+    metrics.set_status("Download tamamlandı")
 
 
 def list_files(bucket_name, endpoint_url, access_key, secret_key):
-    s3 = boto3.client(
-        "s3",
-        endpoint_url=endpoint_url,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=Config(
-            request_checksum_calculation="when_required",
-            response_checksum_validation="when_required"
-        )
-    )
-
+    s3 = _s3_client(endpoint_url, access_key, secret_key)
     response = s3.list_objects_v2(Bucket=bucket_name)
-
     dosyalar = []
     if "Contents" in response:
         for obj in response["Contents"]:
             dosyalar.append({"dosya_adi": obj["Key"], "boyut_byte": obj["Size"]})
-
     return dosyalar
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     download_files(
