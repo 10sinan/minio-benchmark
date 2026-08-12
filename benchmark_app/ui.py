@@ -124,7 +124,7 @@ def _canli_grafikleri_ciz(placeholder):
             y="throughput_mb_s",
             color="islem_tipi",
             markers=True,
-            title="🚀 Canlı Throughput (MB/s)",
+            title="Canlı Throughput (MB/s)",
             labels={"zaman_str": "Zaman", "throughput_mb_s": "MB/s", "islem_tipi": "İşlem"},
             color_discrete_map={
                 "upload": "#4F8EF7",
@@ -137,7 +137,7 @@ def _canli_grafikleri_ciz(placeholder):
             margin=dict(l=0, r=0, t=35, b=0),
             legend=dict(orientation="h", y=-0.25),
         )
-        col1.plotly_chart(fig_tp, use_container_width=True)
+        col1.plotly_chart(fig_tp, width="stretch")
     else:
         col1.info("Throughput verisi bekleniyor…")
 
@@ -156,7 +156,7 @@ def _canli_grafikleri_ciz(placeholder):
         margin=dict(l=0, r=0, t=35, b=0),
         legend=dict(orientation="h", y=-0.25),
     )
-    col2.plotly_chart(fig_lat, use_container_width=True)
+    col2.plotly_chart(fig_lat, width="stretch")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
         )
 
     # ── Throughput Karşılaştırma Grafiği ────────────────────────────────────
-    st.subheader("📈 Throughput Karşılaştırması")
+    st.subheader("Throughput Karşılaştırması")
     throughput_data = {
         "Upload (PutObject)": ozet.get("upload_throughput_mb_s", 0),
         "Download (GetObject)": ozet.get("download_throughput_mb_s", 0),
@@ -222,10 +222,10 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
             height=300,
             margin=dict(l=0, r=0, t=10, b=0),
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width="stretch")
 
     # ── Metadata & Delete Paneli ─────────────────────────────────────────────
-    st.subheader("🔍 Metadata Performansı")
+    st.subheader("Metadata Performansı")
     meta1, meta2 = st.columns(2)
     lo = ozet.get("list_objects_ops_per_sec", 0)
     ho = ozet.get("head_object_ops_per_sec", 0)
@@ -233,15 +233,17 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
     meta2.metric("HeadObject", f"{ho:.2f} ops/sn" if ho else "—")
 
     # ── Delete Benchmark (kullanıcı tetiklemeli) ─────────────────────────────
-    st.subheader("🗑️ Delete Benchmark (İsteğe Bağlı)")
+    st.subheader("Delete Benchmark (İsteğe Bağlı)")
     prefix = st.session_state.get("son_prefix")
     if not prefix:
         st.info("Silme benchmarkı için önce bir test çalıştırın.")
     elif st.session_state.delete_calisiyor:
         st.info("⏳ Delete benchmark devam ediyor…")
-        # Delete thread bitti mi kontrol
         dt = st.session_state.delete_thread
-        if dt and not dt.is_alive():
+        if dt and dt.is_alive():
+            time.sleep(0.5)
+            st.rerun()
+        else:
             st.session_state.delete_calisiyor = False
             dout = st.session_state.delete_output
             if "delete_hata" in dout:
@@ -250,7 +252,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
                 st.session_state.delete_sonuc = dout["delete_sonuc"]
             st.rerun()
     else:
-        if st.button("🗑️ Sil ve Ölç", key="delete_btn"):
+        if st.button("Sil ve Ölç", key="delete_btn"):
             st.session_state.delete_calisiyor = True
             st.session_state.delete_sonuc = None
             st.session_state.delete_hata = None
@@ -275,14 +277,14 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
         d4.metric("Hız", f"{ds.get('ops_per_sec', 0):.1f} ops/sn")
 
     # ── Upload / Download Detay Tabloları ────────────────────────────────────
-    st.subheader("📂 Detay Tabloları")
+    st.subheader("Detay Tabloları")
     col_up, col_dn = st.columns(2)
     with col_up:
         st.caption("**Upload**")
-        st.dataframe(upload_df, use_container_width=True)
+        st.dataframe(upload_df, width="stretch")
     with col_dn:
         st.caption("**Download**")
-        st.dataframe(download_df, use_container_width=True)
+        st.dataframe(download_df, width="stretch")
 
     # Multipart tablosu (varsa)
     if not df.empty and "islem_tipi" in df.columns:
@@ -292,7 +294,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
             if "boyut_byte" in mp_df.columns:
                 mp_df["boyut_mb"] = mp_df["boyut_byte"] / (1024 * 1024)
                 mp_df = mp_df.drop(columns=["boyut_byte"])
-            st.dataframe(mp_df, use_container_width=True)
+            st.dataframe(mp_df, width="stretch")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -300,7 +302,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _karsilastirma_sekmesi():
-    st.header("📊 Geçmiş Testleri Karşılaştır")
+    st.header("Geçmiş Testleri Karşılaştır")
     gecmis_df = history.gecmisi_oku()
 
     if gecmis_df is None or gecmis_df.empty:
@@ -330,7 +332,7 @@ def _karsilastirma_sekmesi():
     secili_label = secili["etiket"].tolist()
 
     # ── Throughput Karşılaştırması ───────────────────────────────────────────
-    st.subheader("🚀 Throughput Karşılaştırması (MB/s)")
+    st.subheader("Throughput Karşılaştırması (MB/s)")
     throughput_cols = {
         "Upload (PutObject)": "upload_throughput_mb_s",
         "Download (GetObject)": "download_throughput_mb_s",
@@ -364,7 +366,7 @@ def _karsilastirma_sekmesi():
 
     # ── Ham veri tablosu ─────────────────────────────────────────────────────
     with st.expander("Ham veri tablosu"):
-        st.dataframe(secili.drop(columns=["etiket"], errors="ignore"), use_container_width=True)
+        st.dataframe(secili.drop(columns=["etiket"], errors="ignore"), width="stretch")
 
 
 def _grouped_bar(secili: pd.DataFrame, labels: list, col_map: dict, y_label: str):
@@ -394,7 +396,7 @@ def _grouped_bar(secili: pd.DataFrame, labels: list, col_map: dict, y_label: str
         legend=dict(orientation="h", y=-0.35),
         xaxis=dict(tickangle=-20),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -404,8 +406,8 @@ def _grouped_bar(secili: pd.DataFrame, labels: list, col_map: dict, y_label: str
 def render():
     _init_state()
 
-    st.set_page_config(page_title="MinIO Benchmark Aracı", layout="wide", page_icon="⚡")
-    st.title("⚡ MinIO / S3 Benchmark Aracı")
+    st.set_page_config(page_title="MinIO Benchmark Aracı", layout="wide")
+    st.title("S3 Benchmark Aracı")
 
     # Config
     try:
@@ -416,7 +418,7 @@ def render():
         return
 
     # ── Sekmeler ─────────────────────────────────────────────────────────────
-    tab_benchmark, tab_karsilastir = st.tabs(["🚀 Benchmark Çalıştır", "📊 Geçmiş Testleri Karşılaştır"])
+    tab_benchmark, tab_karsilastir = st.tabs(["Benchmark Çalıştır", "Geçmiş Testleri Karşılaştır"])
 
     with tab_benchmark:
         _benchmark_sekmesi(settings)
@@ -587,7 +589,7 @@ def _benchmark_sekmesi(settings):
     st.subheader("📜 Geçmiş Testler (Özet)")
     gecmis_df = history.gecmisi_oku()
     if gecmis_df is not None:
-        st.dataframe(gecmis_df, use_container_width=True)
+        st.dataframe(gecmis_df, width="stretch")
     else:
         st.write("Henüz kaydedilmiş test yok.")
 

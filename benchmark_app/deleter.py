@@ -4,9 +4,15 @@ deleter.py — DeleteObjects (toplu silme) performans benchmarkı.
 Kullanıcı isteğiyle çalışır (otomatik değil).
 Belirtilen prefix altındaki tüm nesneleri 1000'lik paketler halinde
 siler ve silme hızını (ops/sn) ölçer.
+
+MinIO / Türkcell Bulut gibi S3 uyumlu sunucuların DeleteObjects için
+zorunlu kıldığı 'Content-MD5' başlığı otomatik hesaplanarak eklenir.
 """
+import base64
+import hashlib
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 from boto3.session import Config
@@ -14,8 +20,23 @@ from boto3.session import Config
 import metrics
 
 
+def _add_content_md5(request, **kwargs):
+    """
+    DeleteObjects isteğinin body'si için Content-MD5 başlığını hesaplar ve ekler.
+    MinIO sunucularının 'Missing required header: Content-MD5' hatasını önler.
+    """
+    if request.body:
+        if isinstance(request.body, str):
+            body_bytes = request.body.encode("utf-8")
+        else:
+            body_bytes = request.body
+        md5_digest = hashlib.md5(body_bytes).digest()
+        md5_b64 = base64.b64encode(md5_digest).decode("utf-8")
+        request.headers["Content-MD5"] = md5_b64
+
+
 def _s3_client(endpoint_url, access_key, secret_key):
-    return boto3.client(
+    s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
         aws_access_key_id=access_key,
@@ -26,6 +47,8 @@ def _s3_client(endpoint_url, access_key, secret_key):
             max_pool_connections=50,
         ),
     )
+    s3.meta.events.register("before-sign.s3.DeleteObjects", _add_content_md5)
+    return s3
 
 
 def benchmark_delete(
@@ -87,14 +110,21 @@ def benchmark_delete(
         delete_payload = {"Objects": [{"Key": k} for k in batch], "Quiet": False}
 
         batch_t0 = time.perf_counter()
+        basarili_bu_batch = 0
         try:
             resp = s3.delete_objects(Bucket=bucket_name, Delete=delete_payload)
-            basarili_bu_batch = len(batch) - len(resp.get("Errors", []))
+            if "Errors" in resp and resp["Errors"]:
+                logging.error("DeleteObjects kısmi hata (batch %d): %s", i // batch_size + 1, resp["Errors"])
+            basarili_bu_batch = len(resp.get("Deleted", []))
+            # Eğer deleted boş dönerse ancak error yoksa (quiet mode vb.), hepsini başarılı say
+            if basarili_bu_batch == 0 and not resp.get("Errors"):
+                basarili_bu_batch = len(batch)
         except Exception as e:
-            basarili_bu_batch = 0
-            logging.exception("DeleteObjects hatası (batch %d): %s", i // batch_size + 1, e)
-        batch_sure = time.perf_counter() - batch_t0
+            logging.exception("DeleteObjects toplu silme hatası (batch %d): %s. Tek tek silme deneniyor…", i // batch_size + 1, e)
+            # Fallback: Toplu silme hata verirse tek tek silmeyi dene
+            basarili_bu_batch = _fallback_delete_single(s3, bucket_name, batch)
 
+        batch_sure = time.perf_counter() - batch_t0
         basarili_silinen += basarili_bu_batch
 
         # Her batch'i ayrı bir metrik olarak kaydet
@@ -106,9 +136,10 @@ def benchmark_delete(
             boyut_byte=None,
         )
         logging.info(
-            "DeleteObjects batch %d/%d: %d nesne, süre=%.4f sn",
+            "DeleteObjects batch %d/%d: %d/%d nesne silindi, süre=%.4f sn",
             i // batch_size + 1,
             -(-toplam_nesne // batch_size),  # ceil division
+            basarili_bu_batch,
             len(batch),
             batch_sure,
         )
@@ -131,3 +162,22 @@ def benchmark_delete(
         "toplam_sure_sn": toplam_sure,
         "ops_per_sec": ops_per_sec,
     }
+
+
+def _fallback_delete_single(s3, bucket_name, batch_keys):
+    """DeleteObjects başarısız olursa nesneleri tek tek sileyim der."""
+    silinen = 0
+
+    def _delete_one(key):
+        nonlocal silinen
+        try:
+            s3.delete_object(Bucket=bucket_name, Key=key)
+            silinen += 1
+        except Exception as ex:
+            logging.exception("Tekil delete_object hatası (%s): %s", key, ex)
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        for key in batch_keys:
+            executor.submit(_delete_one, key)
+
+    return silinen
