@@ -1,17 +1,20 @@
 """
 history.py — Test geçmişini test_gecmisi.csv dosyasına kaydeder.
 
-Yeni sütunlar: p95, p99, multipart_upload_throughput_mb_s,
+Yeni sütunlar: test_id, test_adi, p95, p99, multipart_upload_throughput_mb_s,
                list_objects_ops_per_sec, head_object_ops_per_sec,
                delete_ops_per_sec
 """
 import os
 import csv
+import uuid
 from datetime import datetime
 
 GECMIS_DOSYA = "test_gecmisi.csv"
 
 SUTUNLAR = [
+    "test_id",
+    "test_adi",
     "tarih",
     "profil",
     "bucket",
@@ -33,8 +36,14 @@ SUTUNLAR = [
 ]
 
 
-def kaydet(profil_adi, bucket_name, ozet):
+def kaydet(profil_adi, bucket_name, ozet, test_adi=""):
     dosya_var_mi = os.path.exists(GECMIS_DOSYA)
+    
+    tarih_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    test_id = str(uuid.uuid4())
+    
+    if not test_adi:
+        test_adi = f"Test ({tarih_str})"
 
     with open(GECMIS_DOSYA, "a", newline="", encoding="utf-8") as f:
         yazici = csv.writer(f)
@@ -44,7 +53,9 @@ def kaydet(profil_adi, bucket_name, ozet):
 
         yazici.writerow(
             [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                test_id,
+                test_adi,
+                tarih_str,
                 profil_adi,
                 bucket_name,
                 ozet.get("toplam_dosya", ""),
@@ -71,4 +82,46 @@ def gecmisi_oku():
         return None
 
     import pandas as pd
-    return pd.read_csv(GECMIS_DOSYA)
+    try:
+        df = pd.read_csv(GECMIS_DOSYA)
+        
+        # Geriye dönük uyumluluk: eski csv formatı için
+        degisti = False
+        if "test_id" not in df.columns:
+            df["test_id"] = [str(uuid.uuid4()) for _ in range(len(df))]
+            degisti = True
+        if "test_adi" not in df.columns:
+            if "tarih" in df.columns:
+                df["test_adi"] = "Test (" + df["tarih"].astype(str) + ")"
+            else:
+                df["test_adi"] = "Bilinmeyen Test"
+            degisti = True
+            
+        # Eksik sütunları SUTUNLAR sırasına göre düzenle
+        for sutun in SUTUNLAR:
+            if sutun not in df.columns:
+                df[sutun] = ""
+                
+        # Sadece SUTUNLAR listesindeki sütunları ve sırasını al
+        df = df[SUTUNLAR]
+        
+        if degisti:
+            # Eski dosyayı yeni formatta kaydet
+            df.to_csv(GECMIS_DOSYA, index=False, encoding="utf-8")
+            
+        return df
+    except Exception as e:
+        print(f"Geçmiş okuma hatası: {e}")
+        return None
+
+
+def isim_guncelle(test_id, yeni_isim):
+    df = gecmisi_oku()
+    if df is not None:
+        mask = df["test_id"] == test_id
+        if mask.any():
+            df.loc[mask, "test_adi"] = yeni_isim
+            # SUTUNLAR listesindeki sıraya uygun olduğundan emin ol (gecmisi_oku zaten hallediyor ama yine de df kullanılıyor)
+            df.to_csv(GECMIS_DOSYA, index=False, encoding="utf-8")
+            return True
+    return False
