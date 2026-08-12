@@ -1,32 +1,52 @@
 """
-ui/theme.py — Grafana Tarzı Koyu Dashboard Teması.
+ui/theme.py — Apple Human Interface Guidelines (HIG) Teması.
 
-Streamlit custom CSS enjeksiyonu ve Plotly grafik teması.
-Tüm grafiklere uygulanabilir ve bağımsız olarak import edilebilir.
+Streamlit uygulamasına Apple'ın HIG ilkelerine dayanan:
+  - SF Pro tipografisi
+  - Buzlu cam (Frosted Glass / Vibrancy) panel efekti
+  - Squircle köşe geometrisi
+  - Apple System Color paleti
+  - iOS/macOS tarzı Segmented Control sekmeler
+  - Plotly grafik teması (Apple Dark mode estetiği)
 """
 
 import plotly.graph_objects as go
 import streamlit as st
 
-# ─── Grafana Renk Paleti ─────────────────────────────────────────────────────
+# ─── Apple System Renk Paleti ─────────────────────────────────────────────────
 
 RENKLER = {
-    "bg_ana": "#0B0C10",
-    "bg_panel": "#181B1F",
-    "bg_panel_alt": "#22252B",
-    "kenar": "#2C3235",
-    "metin": "#D8D9DA",
-    "metin_ikincil": "#8E8E93",
-    "mavi": "#5794F2",       # Download, Ağ Alınan
-    "yesil": "#73BF69",      # Başarılı, Ağ Gönderilen
-    "turuncu": "#FF780A",    # Upload, CPU
-    "mor": "#B877D9",        # RAM, HeadObject
-    "kirmizi": "#F2495C",    # Hata, Delete
-    "sari": "#FADE2A",       # Uyarı, Latency
-    "acik_mavi": "#37872D",
+    # Arka Planlar
+    "bg_ana":          "#000000",
+    "bg_panel":        "rgba(28, 28, 30, 0.75)",
+    "bg_panel_solid":  "#1C1C1E",
+    "bg_input":        "rgba(44, 44, 46, 0.8)",
+    "bg_hover":        "rgba(58, 58, 60, 0.6)",
+
+    # Kenarlıklar
+    "kenar":           "rgba(255, 255, 255, 0.10)",
+    "kenar_belirgin":  "rgba(255, 255, 255, 0.18)",
+
+    # Metin
+    "metin":           "#FFFFFF",
+    "metin_ikincil":   "rgba(235, 235, 245, 0.6)",
+    "metin_ucuncul":   "rgba(235, 235, 245, 0.3)",
+
+    # Apple System Colors (Dark Mode)
+    "mavi":    "#0A84FF",   # System Blue  — Download, Ağ Alınan
+    "yesil":   "#30D158",   # System Green — Başarılı, Ağ Gönderilen
+    "turuncu": "#FF9F0C",   # System Orange— Upload, CPU
+    "mor":     "#BF5AF2",   # System Purple— RAM, Multipart
+    "kirmizi": "#FF453A",   # System Red   — Hata, Delete
+    "sari":    "#FFD60A",   # System Yellow— Metadata, Latency
+    "camgobegi":"#64D2FF",  # System Teal  — Ağ
+
+    # Ayraçlar & gölgeler
+    "separator":    "rgba(84, 84, 88, 0.65)",
+    "golge":        "rgba(0, 0, 0, 0.5)",
 }
 
-# Grafik çizgilerine atanacak sıralı renk listesi
+# Grafiklerde sıralı kullanılacak renk listesi
 GRAFIK_RENKLERI = [
     RENKLER["mavi"],
     RENKLER["yesil"],
@@ -34,212 +54,266 @@ GRAFIK_RENKLERI = [
     RENKLER["mor"],
     RENKLER["kirmizi"],
     RENKLER["sari"],
+    RENKLER["camgobegi"],
 ]
 
 
-# ─── CSS Enjeksiyonu ─────────────────────────────────────────────────────────
+# ─── CSS Enjeksiyonu ──────────────────────────────────────────────────────────
 
-def inject_grafana_css() -> None:
+def inject_apple_hig_css() -> None:
     """
-    Streamlit'e Grafana tarzı koyu tema CSS'ini enjekte eder.
+    Streamlit'e Apple HIG tabanlı koyu tema CSS'ini enjekte eder.
     ui.py'de her render döngüsünün başında çağrılmalıdır.
     """
     st.markdown(
         f"""
         <style>
-        /* ── Google Fonts ─────────────────────────────────────── */
+        /* ── SF Pro & Apple Tipografisi ──────────────────── */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-        /* ── Genel Arka Plan & Font ──────────────────────────── */
         html, body, [class*="css"] {{
-            font-family: 'Inter', sans-serif !important;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                         "SF Pro Text", "Helvetica Neue", Inter, sans-serif !important;
             background-color: {RENKLER["bg_ana"]} !important;
             color: {RENKLER["metin"]} !important;
+            -webkit-font-smoothing: antialiased;
         }}
         .stApp {{
-            background-color: {RENKLER["bg_ana"]} !important;
+            background: radial-gradient(
+                ellipse at top,
+                rgba(10, 10, 20, 1) 0%,
+                {RENKLER["bg_ana"]} 70%
+            ) !important;
         }}
 
-        /* ── Başlık Stilleri ─────────────────────────────────── */
-        h1, h2, h3, h4, h5 {{
-            color: {RENKLER["metin"]} !important;
-            font-weight: 600 !important;
-            letter-spacing: -0.3px;
-        }}
+        /* ── Başlıklar (Large Titles) ────────────────────── */
         h1 {{
-            border-bottom: 2px solid {RENKLER["turuncu"]};
-            padding-bottom: 8px;
-            margin-bottom: 24px;
+            font-size: 34px !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.5px !important;
+            color: {RENKLER["metin"]} !important;
+            padding-bottom: 4px;
+        }}
+        h2, h3 {{
+            font-weight: 600 !important;
+            letter-spacing: -0.3px !important;
+            color: {RENKLER["metin"]} !important;
+        }}
+        h4, h5 {{
+            font-weight: 500 !important;
+            color: {RENKLER["metin_ikincil"]} !important;
         }}
 
-        /* ── Metrik Kartları (Grafana Stat Panel) ────────────── */
+        /* ── Buzlu Cam Metrik Kartları (Stat Panels) ─────── */
         [data-testid="stMetric"] {{
             background: {RENKLER["bg_panel"]} !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
             border: 1px solid {RENKLER["kenar"]} !important;
-            border-top: 3px solid {RENKLER["mavi"]} !important;
-            border-radius: 6px !important;
-            padding: 16px !important;
+            border-radius: 16px !important;
+            padding: 20px 18px !important;
+            box-shadow:
+                0 0 0 0.5px {RENKLER["kenar_belirgin"]},
+                0 8px 32px {RENKLER["golge"]},
+                inset 0 1px 0 rgba(255,255,255,0.08) !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease !important;
         }}
-        [data-testid="stMetric"]:nth-child(2) {{
-            border-top-color: {RENKLER["yesil"]} !important;
-        }}
-        [data-testid="stMetric"]:nth-child(3) {{
-            border-top-color: {RENKLER["kirmizi"]} !important;
-        }}
-        [data-testid="stMetric"]:nth-child(4) {{
-            border-top-color: {RENKLER["turuncu"]} !important;
+        [data-testid="stMetric"]:hover {{
+            transform: translateY(-1px) !important;
+            box-shadow:
+                0 0 0 0.5px {RENKLER["kenar_belirgin"]},
+                0 12px 40px {RENKLER["golge"]},
+                inset 0 1px 0 rgba(255,255,255,0.1) !important;
         }}
         [data-testid="stMetricLabel"] {{
-            color: {RENKLER["metin_ikincil"]} !important;
-            font-size: 12px !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.8px !important;
+            letter-spacing: 0.6px !important;
+            color: {RENKLER["metin_ikincil"]} !important;
         }}
         [data-testid="stMetricValue"] {{
-            color: {RENKLER["metin"]} !important;
-            font-size: 28px !important;
+            font-size: 30px !important;
             font-weight: 700 !important;
+            letter-spacing: -0.5px !important;
+            color: {RENKLER["metin"]} !important;
         }}
 
-        /* ── Konteyner & Expander ────────────────────────────── */
-        [data-testid="stContainer"], .stContainer {{
+        /* ── Buzlu Cam Paneller ───────────────────────────── */
+        [data-testid="stContainer"] > div,
+        div[data-testid="column"] > div[data-testid="stVerticalBlock"] > div[class*="stContainer"] {{
             background: {RENKLER["bg_panel"]} !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
             border: 1px solid {RENKLER["kenar"]} !important;
-            border-radius: 6px !important;
+            border-radius: 16px !important;
+            box-shadow: 0 4px 24px {RENKLER["golge"]},
+                        inset 0 1px 0 rgba(255,255,255,0.06) !important;
         }}
+
+        /* ── Expander ────────────────────────────────────── */
         [data-testid="stExpander"] {{
-            background: {RENKLER["bg_panel_alt"]} !important;
+            background: {RENKLER["bg_input"]} !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
             border: 1px solid {RENKLER["kenar"]} !important;
-            border-radius: 6px !important;
+            border-radius: 12px !important;
         }}
         [data-testid="stExpander"] summary {{
             color: {RENKLER["metin"]} !important;
             font-weight: 500 !important;
+            font-size: 15px !important;
         }}
 
-        /* ── Sekmeler (Tabs) ─────────────────────────────────── */
+        /* ── Segmented Control Sekmeler (iOS Tarzı) ──────── */
         [data-testid="stTabs"] [data-baseweb="tab-list"] {{
-            background: {RENKLER["bg_panel"]} !important;
-            border-bottom: 1px solid {RENKLER["kenar"]} !important;
-            gap: 4px;
+            background: rgba(44, 44, 46, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border-radius: 12px !important;
+            padding: 3px !important;
+            border: 1px solid {RENKLER["kenar"]} !important;
+            gap: 2px;
         }}
         [data-testid="stTabs"] [data-baseweb="tab"] {{
             color: {RENKLER["metin_ikincil"]} !important;
             background: transparent !important;
-            border-bottom: 2px solid transparent !important;
+            border-radius: 9px !important;
             font-size: 13px !important;
             font-weight: 500 !important;
-            padding: 8px 16px !important;
+            padding: 6px 16px !important;
+            border: none !important;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
         }}
         [data-testid="stTabs"] [aria-selected="true"] {{
             color: {RENKLER["metin"]} !important;
-            border-bottom: 2px solid {RENKLER["turuncu"]} !important;
-            background: transparent !important;
+            background: rgba(58, 58, 60, 0.9) !important;
+            backdrop-filter: blur(8px) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4),
+                        inset 0 0.5px 0 rgba(255,255,255,0.15) !important;
         }}
 
-        /* ── Input Alanları ──────────────────────────────────── */
+        /* ── Input Alanları ──────────────────────────────── */
         [data-testid="stTextInput"] input,
         [data-testid="stNumberInput"] input,
-        [data-testid="stSelectbox"] [data-baseweb="select"],
         textarea {{
-            background: {RENKLER["bg_panel_alt"]} !important;
+            background: {RENKLER["bg_input"]} !important;
+            backdrop-filter: blur(8px) !important;
             border: 1px solid {RENKLER["kenar"]} !important;
-            border-radius: 4px !important;
+            border-radius: 10px !important;
             color: {RENKLER["metin"]} !important;
+            font-size: 15px !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
         }}
         [data-testid="stTextInput"] input:focus,
         [data-testid="stNumberInput"] input:focus {{
             border-color: {RENKLER["mavi"]} !important;
-            box-shadow: 0 0 0 2px rgba(87, 148, 242, 0.2) !important;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25) !important;
+        }}
+        [data-testid="stSelectbox"] [data-baseweb="select"] {{
+            background: {RENKLER["bg_input"]} !important;
+            border: 1px solid {RENKLER["kenar"]} !important;
+            border-radius: 10px !important;
         }}
         label[data-testid="stWidgetLabel"] p {{
             color: {RENKLER["metin_ikincil"]} !important;
             font-size: 13px !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.1px !important;
         }}
 
-        /* ── Butonlar ────────────────────────────────────────── */
+        /* ── Butonlar (iOS tarzı) ─────────────────────── */
         [data-testid="stButton"] > button {{
-            background: {RENKLER["bg_panel_alt"]} !important;
+            background: {RENKLER["bg_input"]} !important;
+            backdrop-filter: blur(8px) !important;
             border: 1px solid {RENKLER["kenar"]} !important;
-            color: {RENKLER["metin"]} !important;
-            border-radius: 4px !important;
+            border-radius: 10px !important;
+            color: {RENKLER["mavi"]} !important;
+            font-size: 15px !important;
             font-weight: 500 !important;
-            font-size: 13px !important;
-            transition: all 0.15s ease !important;
+            padding: 8px 18px !important;
+            transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
         }}
         [data-testid="stButton"] > button:hover {{
-            border-color: {RENKLER["mavi"]} !important;
-            color: {RENKLER["mavi"]} !important;
-            background: rgba(87, 148, 242, 0.08) !important;
+            background: rgba(10, 132, 255, 0.12) !important;
+            border-color: rgba(10, 132, 255, 0.4) !important;
+            transform: scale(1.01) !important;
+        }}
+        [data-testid="stButton"] > button:active {{
+            transform: scale(0.98) !important;
         }}
         [data-testid="stButton"] > button[kind="primary"] {{
-            background: {RENKLER["turuncu"]} !important;
-            border-color: {RENKLER["turuncu"]} !important;
-            color: #fff !important;
+            background: {RENKLER["mavi"]} !important;
+            border: none !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 16px rgba(10, 132, 255, 0.4) !important;
         }}
         [data-testid="stButton"] > button[kind="primary"]:hover {{
-            background: #e06d00 !important;
-            border-color: #e06d00 !important;
-            color: #fff !important;
+            background: #3A9EFF !important;
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.5) !important;
+            transform: scale(1.02) translateY(-1px) !important;
         }}
 
-        /* ── Bilgi / Uyarı / Hata Kutuları ─────────────────── */
+        /* ── Bilgi / Uyarı / Hata Kutuları ──────────────── */
         [data-testid="stAlert"] {{
-            border-radius: 4px !important;
-            border-left-width: 4px !important;
+            border-radius: 12px !important;
+            backdrop-filter: blur(8px) !important;
         }}
-        [data-testid="stAlert"][data-baseweb="notification"][kind="info"] {{
-            background: rgba(87, 148, 242, 0.1) !important;
-            border-left-color: {RENKLER["mavi"]} !important;
+        [data-testid="stAlert"][kind="info"],
+        div[data-baseweb="notification"][kind="info"] {{
+            background: rgba(10, 132, 255, 0.08) !important;
+            border: 1px solid rgba(10, 132, 255, 0.2) !important;
         }}
         [data-testid="stAlert"][kind="success"] {{
-            background: rgba(115, 191, 105, 0.1) !important;
-            border-left-color: {RENKLER["yesil"]} !important;
+            background: rgba(48, 209, 88, 0.08) !important;
+            border: 1px solid rgba(48, 209, 88, 0.2) !important;
         }}
         [data-testid="stAlert"][kind="error"] {{
-            background: rgba(242, 73, 92, 0.1) !important;
-            border-left-color: {RENKLER["kirmizi"]} !important;
+            background: rgba(255, 69, 58, 0.08) !important;
+            border: 1px solid rgba(255, 69, 58, 0.2) !important;
         }}
         [data-testid="stAlert"][kind="warning"] {{
-            background: rgba(250, 222, 42, 0.08) !important;
-            border-left-color: {RENKLER["sari"]} !important;
+            background: rgba(255, 159, 12, 0.08) !important;
+            border: 1px solid rgba(255, 159, 12, 0.2) !important;
         }}
 
-        /* ── Tablo / Dataframe ───────────────────────────────── */
+        /* ── Tablo / Dataframe ───────────────────────────── */
         [data-testid="stDataFrame"] {{
             border: 1px solid {RENKLER["kenar"]} !important;
-            border-radius: 6px !important;
-        }}
-        .dvn-scroller, .dvn-row {{
-            background: {RENKLER["bg_panel"]} !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
         }}
 
-        /* ── Radio & Checkbox ────────────────────────────────── */
+        /* ── Radio / Checkbox ────────────────────────────── */
         [data-testid="stRadio"] label p,
         [data-testid="stCheckbox"] label p {{
             color: {RENKLER["metin"]} !important;
+            font-size: 15px !important;
         }}
 
-        /* ── Slider ──────────────────────────────────────────── */
-        [data-testid="stSlider"] [data-baseweb="slider"] {{
-            color: {RENKLER["turuncu"]} !important;
+        /* ── Slider ──────────────────────────────────────── */
+        [data-testid="stSlider"] {{
+            accent-color: {RENKLER["mavi"]} !important;
         }}
 
-        /* ── Yan Çubuk (Divider) ─────────────────────────────── */
+        /* ── Divider ─────────────────────────────────────── */
         hr {{
-            border-color: {RENKLER["kenar"]} !important;
+            border: none !important;
+            border-top: 0.5px solid {RENKLER["separator"]} !important;
             margin: 20px 0 !important;
         }}
 
-        /* ── Caption / Küçük Yazılar ─────────────────────────── */
-        [data-testid="stCaptionContainer"] p,
-        small, .caption {{
+        /* ── Küçük Yazılar ───────────────────────────────── */
+        [data-testid="stCaptionContainer"] p, small {{
             color: {RENKLER["metin_ikincil"]} !important;
+            font-size: 12px !important;
         }}
 
-        /* ── Plotly Grafik Arka Planı ────────────────────────── */
-        .js-plotly-plot .plotly .bg {{
-            fill: {RENKLER["bg_panel"]} !important;
+        /* ── Sidebar ─────────────────────────────────────── */
+        [data-testid="stSidebar"] {{
+            background: rgba(18, 18, 20, 0.9) !important;
+            backdrop-filter: blur(20px) !important;
+            border-right: 0.5px solid {RENKLER["separator"]} !important;
         }}
         </style>
         """,
@@ -247,78 +321,99 @@ def inject_grafana_css() -> None:
     )
 
 
-# ─── Plotly Tema Motoru ──────────────────────────────────────────────────────
+# ─── Plotly Apple HIG Tema Motoru ────────────────────────────────────────────
 
-def apply_grafana_theme(fig: go.Figure, *, area_fill: bool = False) -> go.Figure:
+def apply_apple_hig_theme(fig: go.Figure, *, area_fill: bool = False) -> go.Figure:
     """
-    Bir Plotly Figure nesnesine Grafana Dark temasını uygular.
+    Bir Plotly Figure nesnesine Apple HIG Dark Mode temasını uygular.
 
     Parameters
     ----------
-    fig        : go.Figure  — Düzenlenecek figür
-    area_fill  : bool       — True ise çizgi grafiklerine alan dolgusu (tonexty) ekler
+    fig       : go.Figure  — Düzenlenecek figür
+    area_fill : bool       — True ise çizgi grafiklerine şeffaf alan dolgusu ekler
     """
-    # Renk döngüsü
     for i, trace in enumerate(fig.data):
         renk = GRAFIK_RENKLERI[i % len(GRAFIK_RENKLERI)]
         if hasattr(trace, "line") and trace.line is not None:
             trace.line.color = renk
             trace.line.width = 2
         if hasattr(trace, "marker") and trace.marker is not None:
-            trace.marker.color = renk
-        if hasattr(trace, "fillcolor") and area_fill:
-            # RGBA fill (saydamlıklı neon parlama)
-            hex_to_rgb = lambda h: tuple(int(h.lstrip("#")[j:j+2], 16) for j in (0, 2, 4))
-            r, g, b = hex_to_rgb(renk)
-            trace.fillcolor = f"rgba({r},{g},{b},0.12)"
+            if isinstance(trace.marker.color, str) or trace.marker.color is None:
+                trace.marker.color = renk
+        if area_fill and hasattr(trace, "fill"):
+            def hex_rgba(h, a):
+                h = h.lstrip("#")
+                r, g, b = (int(h[j:j+2], 16) for j in (0, 2, 4))
+                return f"rgba({r},{g},{b},{a})"
+            trace.fillcolor = hex_rgba(renk, 0.10)
             trace.fill = "tozeroy"
 
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor=RENKLER["bg_panel"],
-        font=dict(family="Inter, sans-serif", color=RENKLER["metin"], size=12),
-        title_font=dict(color=RENKLER["metin"], size=14, family="Inter, sans-serif"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(
+            family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif",
+            color=RENKLER["metin"],
+            size=12,
+        ),
+        title_font=dict(
+            color=RENKLER["metin"],
+            size=15,
+            family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+        ),
         legend=dict(
-            bgcolor="rgba(0,0,0,0)",
+            bgcolor="rgba(28, 28, 30, 0.5)",
             bordercolor=RENKLER["kenar"],
             borderwidth=1,
             font=dict(color=RENKLER["metin_ikincil"], size=11),
         ),
         xaxis=dict(
-            gridcolor=RENKLER["kenar"],
-            linecolor=RENKLER["kenar"],
+            gridcolor="rgba(84, 84, 88, 0.3)",
+            linecolor=RENKLER["separator"],
             tickfont=dict(color=RENKLER["metin_ikincil"], size=11),
             title_font=dict(color=RENKLER["metin_ikincil"]),
             zeroline=False,
+            showgrid=True,
         ),
         yaxis=dict(
-            gridcolor=RENKLER["kenar"],
-            linecolor=RENKLER["kenar"],
+            gridcolor="rgba(84, 84, 88, 0.3)",
+            linecolor=RENKLER["separator"],
             tickfont=dict(color=RENKLER["metin_ikincil"], size=11),
             title_font=dict(color=RENKLER["metin_ikincil"]),
             zeroline=False,
+            showgrid=True,
         ),
         hoverlabel=dict(
-            bgcolor=RENKLER["bg_panel_alt"],
-            bordercolor=RENKLER["kenar"],
-            font=dict(color=RENKLER["metin"], family="Inter, sans-serif", size=12),
+            bgcolor="rgba(28, 28, 30, 0.95)",
+            bordercolor=RENKLER["kenar_belirgin"],
+            font=dict(
+                color=RENKLER["metin"],
+                family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+                size=13,
+            ),
         ),
-        margin=dict(l=8, r=8, t=36, b=8),
+        margin=dict(l=8, r=8, t=40, b=8),
     )
     return fig
 
 
-def grafana_renk(islem_tipi: str) -> str:
-    """İşlem tipine göre Grafana renk kodu döndürür."""
+def apple_renk(islem_tipi: str) -> str:
+    """İşlem tipine göre Apple System Color kodu döndürür."""
     harita = {
-        "upload": RENKLER["turuncu"],
-        "karma_upload": RENKLER["turuncu"],
-        "download": RENKLER["mavi"],
-        "karma_download": RENKLER["mavi"],
-        "multipart_upload": RENKLER["mor"],
-        "list_objects": RENKLER["yesil"],
-        "head_object": RENKLER["sari"],
-        "karma_head": RENKLER["sari"],
-        "delete": RENKLER["kirmizi"],
+        "upload":             RENKLER["turuncu"],
+        "karma_upload":       RENKLER["turuncu"],
+        "download":           RENKLER["mavi"],
+        "karma_download":     RENKLER["mavi"],
+        "multipart_upload":   RENKLER["mor"],
+        "list_objects":       RENKLER["yesil"],
+        "head_object":        RENKLER["sari"],
+        "karma_head":         RENKLER["sari"],
+        "delete":             RENKLER["kirmizi"],
     }
     return harita.get(islem_tipi, RENKLER["metin_ikincil"])
+
+
+# Eski Grafana fonksiyon adlarını geriye dönük uyumluluk için aliasla
+inject_grafana_css  = inject_apple_hig_css
+apply_grafana_theme = apply_apple_hig_theme
+grafana_renk        = apple_renk

@@ -28,7 +28,8 @@ from engine import actions
 from core import deleter, s3_utils
 from analytics import metrics, reporter, resource_monitor
 from analytics import history
-from ui.theme import inject_grafana_css, apply_grafana_theme, grafana_renk, RENKLER
+from ui.theme import inject_apple_hig_css, apply_apple_hig_theme, apple_renk, RENKLER
+from ui.theme import inject_grafana_css, apply_grafana_theme, grafana_renk  # alias
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -326,7 +327,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _karma_sonuc_paneli(df, ozet, resource_data):
-    st.subheader("📋 Karma İş Yükü Özeti")
+    st.subheader("📋 Karma İş Yükü Performans Analizi")
 
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Toplam İşlem", ozet.get("toplam_dosya", 0))
@@ -565,9 +566,9 @@ def _grouped_bar(secili, labels, col_map, y_label):
 
 def render():
     _init_state()
-    st.set_page_config(page_title="S3 Benchmark Dashboard", layout="wide", page_icon="⚡")
-    inject_grafana_css()
-    st.title("⚡ S3 Benchmark Dashboard")
+    st.set_page_config(page_title="S3 Benchmark", layout="wide", page_icon="📐")
+    inject_apple_hig_css()
+    st.title("📐 S3 Benchmark")
 
     try:
         with open("config.yaml", "r") as f:
