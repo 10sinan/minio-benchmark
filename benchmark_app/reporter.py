@@ -8,8 +8,8 @@ from rich.console import Console
 from rich.table import Table
 
 # İşlem tipleri (UI'da gösterilecek sırada)
-THROUGHPUT_TIPLER = ["upload", "download", "multipart_upload"]
-OPS_TIPLER = ["list_objects", "head_object", "delete"]
+THROUGHPUT_TIPLER = ["upload", "download", "multipart_upload", "karma_upload", "karma_download"]
+OPS_TIPLER = ["list_objects", "head_object", "delete", "karma_head"]
 
 
 def tabloya_cevir(sonuclar):
@@ -110,9 +110,12 @@ def ozet_cikar(df):
             "upload_throughput_mb_s": 0.0,
             "download_throughput_mb_s": 0.0,
             "multipart_upload_throughput_mb_s": 0.0,
+            "karma_upload_throughput_mb_s": 0.0,
+            "karma_download_throughput_mb_s": 0.0,
             "list_objects_ops_per_sec": 0.0,
             "head_object_ops_per_sec": 0.0,
             "delete_ops_per_sec": 0.0,
+            "karma_head_ops_per_sec": 0.0,
             "p95": 0.0,
             "p99": 0.0,
         }
@@ -144,14 +147,18 @@ def ozet_cikar(df):
         "en_hizli": en_hizli,
         "toplam_sure": toplam_sure,
         "toplam_throughput_mb_s": toplam_throughput_mb_s,
-        # Per-type throughput (MB/s)
+        # Standart throughput (MB/s)
         "upload_throughput_mb_s": _throughput_for_type(df, "upload"),
         "download_throughput_mb_s": _throughput_for_type(df, "download"),
         "multipart_upload_throughput_mb_s": _throughput_for_type(df, "multipart_upload"),
-        # Metadata ops/sec
+        # Karma throughput (MB/s)
+        "karma_upload_throughput_mb_s": _throughput_for_type(df, "karma_upload"),
+        "karma_download_throughput_mb_s": _throughput_for_type(df, "karma_download"),
+        # Metadata ops/sn
         "list_objects_ops_per_sec": _ops_per_sec_for_type(df, "list_objects"),
         "head_object_ops_per_sec": _ops_per_sec_for_type(df, "head_object"),
         "delete_ops_per_sec": _ops_per_sec_for_type(df, "delete"),
+        "karma_head_ops_per_sec": _ops_per_sec_for_type(df, "karma_head"),
         "p95": p95,
         "p99": p99,
     }
