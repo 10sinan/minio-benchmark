@@ -21,13 +21,8 @@ import logging
 import boto3
 from boto3.session import Config
 
-import generator
-import uploader
-import downloader
-import metadata_ops
-import metrics
-import reporter
-from analytics import resource_monitor
+from core import generator, uploader, downloader, metadata_ops
+from analytics import metrics, reporter, resource_monitor
 from engine import mixed_engine
 
 

@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import boto3
 from boto3.session import Config
 
-import metrics
+from analytics import metrics
 
 
 def _add_content_md5(request, **kwargs):

@@ -7,7 +7,7 @@ os.environ.pop("HTTPS_PROXY", None)
 os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
-import ui
+from ui import render
 
 if __name__ == "__main__":
-    ui.render()
+    render()

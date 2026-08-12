@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import boto3
 from boto3.session import Config
 
-import metrics
+from analytics import metrics
 
 
 def _s3_client(endpoint_url: str, access_key: str, secret_key: str):

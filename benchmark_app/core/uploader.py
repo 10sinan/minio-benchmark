@@ -13,7 +13,7 @@ from boto3.session import Config
 from boto3.s3.transfer import TransferConfig
 from concurrent.futures import ThreadPoolExecutor
 
-import metrics
+from analytics import metrics
 
 # 100 MB eşiği (bayt cinsinden)
 MULTIPART_ESIK_BYTE = 100 * 1024 * 1024

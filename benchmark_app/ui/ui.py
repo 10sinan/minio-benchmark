@@ -1,15 +1,16 @@
 """
-ui.py — Streamlit arayüzü (ana modül).
+ui/ui.py — Streamlit arayüzü (ana modül).
 
 Sekmeler:
   1. 🚀 Benchmark Çalıştır   — Standart veya Karma İş Yükü modu
   2. 📊 Geçmiş Testleri Karşılaştır
 
-Yeni Faz 2 özellikleri:
+Faz 2 + Grafana Tasarımı:
+  * Grafana koyu tema CSS enjeksiyonu (ui/theme.py)
+  * Tüm Plotly grafikleri Grafana stilinde
   * Mod seçimi: Standart / Karma İş Yükü
-  * Karma mod: süre + oran slider'ları
   * Canlı grafiklere CPU, RAM ve Ağ satırı (psutil)
-  * Karma sonuç paneli (karma_upload / karma_download / karma_head)
+  * Karma sonuç paneli
 """
 
 import logging
@@ -23,13 +24,11 @@ import plotly.graph_objects as go
 import streamlit as st
 import yaml
 
-import actions
-import deleter
-import history
-import metrics
-import reporter
-import s3_utils
-from analytics import resource_monitor
+from engine import actions
+from core import deleter, s3_utils
+from analytics import metrics, reporter, resource_monitor
+from analytics import history
+from ui.theme import inject_grafana_css, apply_grafana_theme, grafana_renk, RENKLER
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -160,6 +159,7 @@ def _canli_grafikleri_ciz(placeholder):
                 )
                 fig_tp.update_layout(height=280, margin=dict(l=0, r=0, t=35, b=0),
                                      legend=dict(orientation="h", y=-0.3))
+                apply_grafana_theme(fig_tp, area_fill=True)
                 col1.plotly_chart(fig_tp, width="stretch")
             else:
                 col1.info("Throughput verisi bekleniyor…")
@@ -172,6 +172,7 @@ def _canli_grafikleri_ciz(placeholder):
             )
             fig_lat.update_layout(height=280, margin=dict(l=0, r=0, t=35, b=0),
                                   legend=dict(orientation="h", y=-0.3))
+            apply_grafana_theme(fig_lat)
             col2.plotly_chart(fig_lat, width="stretch")
         else:
             st.info("⏳ Henüz metrik yok, bekleniyor…")
@@ -202,6 +203,7 @@ def _canli_grafikleri_ciz(placeholder):
                 height=250, margin=dict(l=0, r=0, t=35, b=0),
                 legend=dict(orientation="h", y=-0.3),
             )
+            apply_grafana_theme(fig_cpu)
             col3.plotly_chart(fig_cpu, width="stretch")
 
             fig_net = go.Figure()
@@ -221,6 +223,7 @@ def _canli_grafikleri_ciz(placeholder):
                 height=250, margin=dict(l=0, r=0, t=35, b=0),
                 legend=dict(orientation="h", y=-0.3),
             )
+            apply_grafana_theme(fig_net)
             col4.plotly_chart(fig_net, width="stretch")
 
 
@@ -282,6 +285,7 @@ Bu değerlendirme, **{secilen_profil}** profiline göre yapılmıştır:
             text=[f"{v:.2f}" for v in throughput_data.values()], textposition="outside",
         ))
         fig_bar.update_layout(yaxis_title="MB/s", height=300, margin=dict(l=0, r=0, t=10, b=0))
+        apply_grafana_theme(fig_bar)
         st.plotly_chart(fig_bar, width="stretch")
 
     # Metadata Paneli
@@ -365,6 +369,7 @@ def _karma_sonuc_paneli(df, ozet, resource_data):
                 title="Karma Throughput (MB/s)",
                 yaxis_title="MB/s", height=300, margin=dict(l=0, r=0, t=40, b=0),
             )
+            apply_grafana_theme(fig_tp)
             col2.plotly_chart(fig_tp, width="stretch")
 
     # Karma Head ops/sn
@@ -394,6 +399,7 @@ def _karma_sonuc_paneli(df, ozet, resource_data):
             height=280, margin=dict(l=0, r=0, t=35, b=0),
             legend=dict(orientation="h", y=-0.3),
         )
+        apply_grafana_theme(fig_cpu)
         col3.plotly_chart(fig_cpu, width="stretch")
 
         fig_net = go.Figure()
@@ -410,6 +416,7 @@ def _karma_sonuc_paneli(df, ozet, resource_data):
             height=280, margin=dict(l=0, r=0, t=35, b=0),
             legend=dict(orientation="h", y=-0.3),
         )
+        apply_grafana_theme(fig_net)
         col4.plotly_chart(fig_net, width="stretch")
 
     # Ham tablo
@@ -548,6 +555,7 @@ def _grouped_bar(secili, labels, col_map, y_label):
         legend=dict(orientation="h", y=-0.35),
         xaxis=dict(tickangle=-20),
     )
+    apply_grafana_theme(fig)
     st.plotly_chart(fig, width="stretch")
 
 
@@ -557,8 +565,9 @@ def _grouped_bar(secili, labels, col_map, y_label):
 
 def render():
     _init_state()
-    st.set_page_config(page_title="MinIO Benchmark Aracı", layout="wide", page_icon="⚡")
-    st.title("⚡ MinIO / S3 Benchmark Aracı")
+    st.set_page_config(page_title="S3 Benchmark Dashboard", layout="wide", page_icon="⚡")
+    inject_grafana_css()
+    st.title("⚡ S3 Benchmark Dashboard")
 
     try:
         with open("config.yaml", "r") as f:
