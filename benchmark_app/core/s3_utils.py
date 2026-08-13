@@ -30,7 +30,7 @@ def list_prefixes(bucket_name, endpoint, access_key, secret_key):
         prefixes = [p["Prefix"].rstrip("/") for p in resp.get("CommonPrefixes", [])]
         return prefixes
     except Exception as e:
-        logging.warning("Prefix listelenemedi: %s", e)
+        logging.debug("Prefix listelenemedi: %s", e)
         return []
 
 

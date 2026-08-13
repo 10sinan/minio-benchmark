@@ -311,9 +311,52 @@ def inject_apple_hig_css() -> None:
 
         /* ── Sidebar ─────────────────────────────────────── */
         [data-testid="stSidebar"] {{
-            background: rgba(18, 18, 20, 0.9) !important;
+            background: rgba(18, 18, 20, 0.95) !important;
             backdrop-filter: blur(20px) !important;
             border-right: 0.5px solid {RENKLER["separator"]} !important;
+            padding-top: 0 !important;
+        }}
+        [data-testid="stSidebar"] > div:first-child {{
+            padding-top: 1rem !important;
+        }}
+        [data-testid="stSidebarContent"] {{
+            padding: 0.75rem 1rem !important;
+        }}
+
+        /* ── Kompakt Density ─────────────────────────────── */
+        /* Streamlit'in devasa üst boşluğunu kaldır */
+        .stMainBlockContainer, .block-container {{
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }}
+        /* Metrik kartlarını sıkıştır */
+        [data-testid="stMetric"] {{
+            padding: 12px 14px !important;
+            border-radius: 12px !important;
+        }}
+        [data-testid="stMetricValue"] {{
+            font-size: 22px !important;
+        }}
+        [data-testid="stMetricLabel"] {{
+            font-size: 10px !important;
+        }}
+        /* Eleman arası dikey boşluklar */
+        .element-container {{
+            margin-bottom: 0.4rem !important;
+        }}
+        /* Tab listesi kompakt */
+        [data-testid="stTabs"] [data-baseweb="tab-list"] {{
+            margin-bottom: 0.5rem !important;
+        }}
+        /* Başlık alanını küçült */
+        h2 {{
+            margin-top: 0 !important;
+            margin-bottom: 0.5rem !important;
+            font-size: 22px !important;
+        }}
+        /* Divider daha ince boşluk */
+        hr {{
+            margin: 10px 0 !important;
         }}
         </style>
         """,
@@ -334,12 +377,21 @@ def apply_apple_hig_theme(fig: go.Figure, *, area_fill: bool = False) -> go.Figu
     """
     for i, trace in enumerate(fig.data):
         renk = GRAFIK_RENKLERI[i % len(GRAFIK_RENKLERI)]
-        if hasattr(trace, "line") and trace.line is not None:
-            trace.line.color = renk
-            trace.line.width = 2
-        if hasattr(trace, "marker") and trace.marker is not None:
-            if isinstance(trace.marker.color, str) or trace.marker.color is None:
-                trace.marker.color = renk
+        if getattr(trace, "type", None) == "pie":
+            continue
+        try:
+            if hasattr(trace, "line") and trace.line is not None:
+                trace.line.color = renk
+                trace.line.width = 2
+        except AttributeError:
+            pass
+        try:
+            if hasattr(trace, "marker") and trace.marker is not None:
+                m_color = getattr(trace.marker, "color", None)
+                if isinstance(m_color, str) or m_color is None:
+                    trace.marker.color = renk
+        except AttributeError:
+            pass
         if area_fill and hasattr(trace, "fill"):
             def hex_rgba(h, a):
                 h = h.lstrip("#")

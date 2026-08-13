@@ -1,4 +1,4 @@
 """
-ui/__init__.py — Streamlit arayüz paketi.
+ui/__init__.py — Kullanıcı arayüzü paketi.
 """
 from ui.ui import render

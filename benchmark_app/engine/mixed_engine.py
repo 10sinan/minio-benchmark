@@ -173,3 +173,49 @@ def run_mixed_benchmark(
     toplam = len(metrics.tum_sonuclari_al())
     logging.info("Karma iş yükü tamamlandı. Toplam %d işlem kaydedildi.", toplam)
     metrics.set_status("Karma iş yükü tamamlandı")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Yardımcı Fonksiyonlar
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _karma_bos_sonuc():
+    import pandas as pd
+    from analytics import reporter
+    df = pd.DataFrame()
+    return df, reporter.ozet_cikar(df), []
+
+
+def _prefix_keylerini_listele(
+    bucket_name: str,
+    endpoint_url: str,
+    access_key: str,
+    secret_key: str,
+    prefix: str,
+) -> list:
+    """Belirtilen prefix altındaki tüm nesne anahtarlarını döndürür."""
+    import boto3
+    from boto3.session import Config
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        config=Config(
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+            max_pool_connections=10,
+        ),
+    )
+    prefix_tam = prefix if prefix.endswith("/") else f"{prefix}/"
+    anahtarlar = []
+    kwargs = {"Bucket": bucket_name, "Prefix": prefix_tam}
+    while True:
+        resp = s3.list_objects_v2(**kwargs)
+        for obj in resp.get("Contents", []):
+            if not obj["Key"].endswith("_mp"):
+                anahtarlar.append(obj["Key"])
+        if not resp.get("IsTruncated"):
+            break
+        kwargs["ContinuationToken"] = resp.get("NextContinuationToken")
+    return anahtarlar
