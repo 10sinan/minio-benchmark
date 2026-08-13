@@ -55,6 +55,8 @@ def render(ctx: dict) -> None:
                 st.session_state.benchmark_sonuc = output["sonuc"]
             elif "karma_sonuc" in output:
                 st.session_state.karma_sonuc = output["karma_sonuc"]
+            elif "sweep_sonuc" in output:
+                st.session_state.sweep_sonuc = output["sweep_sonuc"]
             st.rerun()
     else:
         grafik_paneli()

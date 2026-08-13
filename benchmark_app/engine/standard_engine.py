@@ -22,6 +22,7 @@ def run_benchmark(
     secret_key,
     bucket_name,
     test_prefix,
+    matrix_ayarlari=None,
     folder_path="generated_files",
     indirilecek_klasor="downloaded_files",
     iptal_kontrol=None,
@@ -48,9 +49,10 @@ def run_benchmark(
         metrics.set_status("Dosyalar üretiliyor…")
         generator.generate_files(
             folder_path=folder_path,
-            file_count=ayarlar["file_count"],
-            file_size_min_mb=ayarlar["file_size_min_mb"],
-            file_size_max_mb=ayarlar["file_size_max_mb"],
+            file_count=ayarlar.get("file_count"),
+            file_size_min_mb=ayarlar.get("file_size_min_mb"),
+            file_size_max_mb=ayarlar.get("file_size_max_mb"),
+            matrix_ayarlari=matrix_ayarlari,
         )
 
         if iptal_kontrol and iptal_kontrol():

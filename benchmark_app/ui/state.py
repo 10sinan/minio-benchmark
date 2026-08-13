@@ -29,6 +29,7 @@ def init_state() -> None:
         "test_calisiyor": False,
         "benchmark_sonuc": None,
         "karma_sonuc": None,
+        "sweep_sonuc": None,
         "benchmark_hata": None,
         "benchmark_thread": None,
         "thread_output": {},
@@ -51,13 +52,13 @@ def init_state() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def benchmark_thread_fn(ayarlar, endpoint, access_key, secret_key,
-                        bucket_name, test_prefix, iptal_kontrol, output_dict):
+                        bucket_name, test_prefix, matrix_ayarlari, iptal_kontrol, output_dict):
     """Standart benchmark thread'inin hedef fonksiyonu."""
     try:
         df, ozet, upload_df, download_df = actions.run_benchmark(
             ayarlar=ayarlar, endpoint=endpoint, access_key=access_key,
             secret_key=secret_key, bucket_name=bucket_name,
-            test_prefix=test_prefix, iptal_kontrol=iptal_kontrol,
+            test_prefix=test_prefix, matrix_ayarlari=matrix_ayarlari, iptal_kontrol=iptal_kontrol,
         )
         output_dict["sonuc"] = (df, ozet, upload_df, download_df)
         output_dict["mod"] = "standart"
@@ -80,6 +81,22 @@ def karma_thread_fn(ayarlar, endpoint, access_key, secret_key,
         output_dict["mod"] = "karma"
     except Exception as e:
         logging.exception("Karma benchmark hatası: %s", e)
+        output_dict["hata"] = str(e)
+
+
+def sweep_thread_fn(ayarlar, endpoint, access_key, secret_key,
+                    bucket_name, test_prefix_base, iptal_kontrol, output_dict):
+    """Sweep benchmark thread'inin hedef fonksiyonu."""
+    try:
+        sweep_df = actions.run_concurrency_sweep(
+            ayarlar=ayarlar, endpoint=endpoint, access_key=access_key,
+            secret_key=secret_key, bucket_name=bucket_name,
+            test_prefix_base=test_prefix_base, iptal_kontrol=iptal_kontrol,
+        )
+        output_dict["sweep_sonuc"] = sweep_df
+        output_dict["mod"] = "sweep"
+    except Exception as e:
+        logging.exception("Sweep benchmark hatası: %s", e)
         output_dict["hata"] = str(e)
 
 

@@ -12,10 +12,10 @@ import streamlit as st
 import yaml
 
 from core import s3_utils
-from ui.state import init_state, benchmark_thread_fn, karma_thread_fn, olustur_test_prefix
+from ui.state import init_state, benchmark_thread_fn, karma_thread_fn, sweep_thread_fn, olustur_test_prefix
 from ui.theme import inject_apple_hig_css
 from ui.components import sidebar
-from ui.tabs import live_tab, details_tab, history_tab
+from ui.tabs import live_tab, details_tab, history_tab, sweep_tab
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -49,6 +49,9 @@ def render() -> None:
     auto_temizle        = cfg["auto_temizle"]
     karma_mod           = cfg["karma_mod"]
     karma_ayarlar       = cfg["karma_ayarlar"]
+    sweep_mod           = cfg.get("sweep_mod", False)
+    matrix_mod          = cfg.get("matrix_mod", False)
+    matrix_ayarlari     = cfg.get("matrix_ayarlari", None)
     ayarlar             = cfg["ayarlar"]
 
     # ── Başlık ────────────────────────────────────────────────────────────────
@@ -82,6 +85,7 @@ def render() -> None:
                     "test_calisiyor":   True,
                     "benchmark_sonuc":  None,
                     "karma_sonuc":      None,
+                    "sweep_sonuc":      None,
                     "benchmark_hata":   None,
                     "thread_output":    {},
                     "son_prefix":       test_prefix,
@@ -100,11 +104,19 @@ def render() -> None:
                               st.session_state.thread_output),
                         daemon=True,
                     )
+                elif sweep_mod:
+                    thread = threading.Thread(
+                        target=sweep_thread_fn,
+                        args=(ayarlar, endpoint, access_key, secret_key, bucket_name,
+                              test_prefix, iptal_fn, st.session_state.thread_output),
+                        daemon=True,
+                    )
                 else:
+                    matris = matrix_ayarlari if matrix_mod else None
                     thread = threading.Thread(
                         target=benchmark_thread_fn,
                         args=(ayarlar, endpoint, access_key, secret_key, bucket_name,
-                              test_prefix, iptal_fn, st.session_state.thread_output),
+                              test_prefix, matris, iptal_fn, st.session_state.thread_output),
                         daemon=True,
                     )
 
@@ -113,8 +125,8 @@ def render() -> None:
                 st.rerun()
 
     # ── Sekmeler ──────────────────────────────────────────────────────────────
-    tab_canli, tab_detay, tab_gecmis = st.tabs(
-        ["Canlı İzleme", "Detaylar", "Geçmiş & Karşılaştır"]
+    tab_canli, tab_detay, tab_gecmis, tab_sweep = st.tabs(
+        ["Canlı İzleme", "Detaylar", "Geçmiş & Karşılaştır", "Sweep Analizi"]
     )
 
     with tab_canli:
@@ -132,6 +144,9 @@ def render() -> None:
 
     with tab_gecmis:
         history_tab.render()
+
+    with tab_sweep:
+        sweep_tab.render_sweep_tab(st.session_state.sweep_sonuc)
 
 
 if __name__ == "__main__":

@@ -64,15 +64,31 @@ def sidebar(settings: dict) -> dict:
 
         # ── Benchmark Modu ────────────────────────────────────────────────────
         st.divider()
-        st.markdown("### Benchmark Modu")
+        st.markdown(
+            "### Benchmark Modu",
+            help=(
+                "Standart: Sırayla upload ve download performansını ölçer.\n\n"
+                "Karma İş Yükü: Aynı anda okuma, yazma ve sorgulama eylemlerini karıştırır.\n\n"
+                "Concurrency Sweep: 1-32 işçi sayılarını sırayla deneyip sunucu kapasite sınırını bulur.\n\n"
+                "Değişken Boyut Matrisi: Aynı anda hem küçük (4 KB) hem büyük (100 MB) dosyaları yükler."
+            ),
+        )
         secilen_mod = st.radio(
             "Benchmark Modu Seçimi",
-            ["Standart", "Karma İş Yükü"],
+            ["Standart", "Karma İş Yükü", "Concurrency Sweep", "Değişken Boyut Matrisi"],
+            captions=[
+                "Sırayla standart upload ve download testi yapar.",
+                "Eşzamanlı okuma, yazma ve sorgulama eylemlerini karıştırır.",
+                "1 ile 32 işçi sayısını deneyerek kapasite sınırını bulur.",
+                "Aynı anda hem küçük (4 KB) hem büyük (100 MB) dosyaları dener.",
+            ],
             key="benchmark_modu",
             label_visibility="collapsed",
             disabled=st.session_state.test_calisiyor,
         )
         karma_mod = secilen_mod == "Karma İş Yükü"
+        sweep_mod = secilen_mod == "Concurrency Sweep"
+        matrix_mod = secilen_mod == "Değişken Boyut Matrisi"
 
         karma_ayarlar = {}
         if karma_mod:
@@ -88,6 +104,22 @@ def sidebar(settings: dict) -> dict:
                 "download_agirlik":  download_pct,
                 "head_agirlik":      head_pct,
             }
+
+        matrix_ayarlari = None
+        if matrix_mod:
+            st.caption("Matris Ayarları (Örn: 4 KB ve 1000 MB)")
+            st.markdown("**Grup 1 (Küçük Dosyalar)**")
+            g1_count = st.number_input("Grup 1 Dosya Sayısı", min_value=1, value=10, key="g1_count")
+            g1_size = st.number_input("Grup 1 Boyut (MB)", min_value=0.001, value=0.004, step=0.001, format="%.3f", key="g1_size")
+            
+            st.markdown("**Grup 2 (Büyük Dosyalar)**")
+            g2_count = st.number_input("Grup 2 Dosya Sayısı", min_value=1, value=2, key="g2_count")
+            g2_size = st.number_input("Grup 2 Boyut (MB)", min_value=1.0, value=100.0, step=1.0, key="g2_size")
+            
+            matrix_ayarlari = [
+                {"count": g1_count, "min_mb": g1_size, "max_mb": g1_size},
+                {"count": g2_count, "min_mb": g2_size, "max_mb": g2_size},
+            ]
 
         # ── Bucket Klasörleri ─────────────────────────────────────────────────
         st.divider()
@@ -118,6 +150,7 @@ def sidebar(settings: dict) -> dict:
         secilen_profil=secilen_profil, ozel_ayarlar_kullan=ozel_ayarlar,
         auto_temizle=auto_temizle,
         karma_mod=karma_mod, karma_ayarlar=karma_ayarlar,
+        sweep_mod=sweep_mod, matrix_mod=matrix_mod, matrix_ayarlari=matrix_ayarlari,
         ayarlar=dict(
             file_count=int(file_count),
             file_size_min_mb=float(file_size_min_mb),
