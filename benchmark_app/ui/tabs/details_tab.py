@@ -7,12 +7,15 @@ Test tamamlandıktan sonra gösterilir:
   - Her iki mod için: KPI barı, Sil ve Ölç paneli, Geçmişe kaydetme
 """
 
+import threading
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
 from analytics import reporter, history
+from core import deleter
 from ui.components import kpi_bari, delete_paneli
 from ui.theme import apply_apple_hig_theme, RENKLER
 
@@ -38,6 +41,7 @@ def render(ctx: dict) -> None:
     test_adi    = ctx["test_adi"]
     secilen_profil      = ctx["secilen_profil"]
     ozel_ayarlar_kullan = ctx["ozel_ayarlar_kullan"]
+    auto_temizle        = ctx.get("auto_temizle", False)
     settings    = ctx["settings"]
 
     if st.session_state.benchmark_hata:
@@ -53,7 +57,12 @@ def render(ctx: dict) -> None:
             bucket_name=bucket_name, ozet=ozet, test_adi=test_adi,
         )
         st.divider()
-        delete_paneli(st.session_state.son_prefix, endpoint, access_key, secret_key, bucket_name)
+        if auto_temizle and st.session_state.son_prefix:
+            _auto_temizle(endpoint, access_key, secret_key, bucket_name,
+                          st.session_state.son_prefix)
+        else:
+            delete_paneli(st.session_state.son_prefix, endpoint, access_key,
+                          secret_key, bucket_name)
 
     elif st.session_state.karma_sonuc is not None:
         df, ozet, res_data = st.session_state.karma_sonuc
@@ -65,10 +74,45 @@ def render(ctx: dict) -> None:
             bucket_name=bucket_name, ozet=ozet, test_adi=test_adi,
         )
         st.divider()
-        delete_paneli(st.session_state.son_prefix, endpoint, access_key, secret_key, bucket_name)
+        if auto_temizle and st.session_state.son_prefix:
+            _auto_temizle(endpoint, access_key, secret_key, bucket_name,
+                          st.session_state.son_prefix)
+        else:
+            delete_paneli(st.session_state.son_prefix, endpoint, access_key,
+                          secret_key, bucket_name)
 
     else:
         st.info("Test tamamlandıktan sonra detaylar burada görünecek.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Otomatik Temizlik
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _auto_temizle(endpoint, access_key, secret_key, bucket_name, prefix):
+    """
+    Test bitiminde bucket prefix'ini otomatik siler.
+    Yalnızca bir kez çalışır; ikinci renderda session_state bayrağı ile atlanır.
+    """
+    bayrak_key = f"auto_temizlendi_{prefix}"
+    if st.session_state.get(bayrak_key):
+        st.success(f"🧹 `{prefix}` otomatik temizlendi.")
+        return
+
+    with st.spinner(f"🧹 `{prefix}` otomatik temizleniyor…"):
+        try:
+            sonuc = deleter.benchmark_delete(
+                bucket_name=bucket_name,
+                endpoint_url=endpoint,
+                access_key=access_key,
+                secret_key=secret_key,
+                prefix=prefix,
+            )
+            st.session_state[bayrak_key] = True
+            silinen = sonuc.get("basarili_silinen", 0)
+            st.success(f"🧹 `{prefix}` temizlendi — {silinen} nesne silindi.")
+        except Exception as e:
+            st.error(f"Otomatik temizlik başarısız: {e}")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

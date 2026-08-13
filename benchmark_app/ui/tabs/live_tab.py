@@ -6,8 +6,10 @@ Test çalışırken:
   - 5'li KPI barı (anlık sayaçlar)
   - 2x2 kompakt grafik grid (Throughput / Latency / CPU&RAM / Ağ)
   - Thread bitişini izleyerek session_state'i günceller
+  - Canlı Log Paneli (genişletilebilir expander)
 Test çalışmıyorken:
   - Boş grafik placeholder grid'i gösterir
+  - Son log kayıtları (genişletilebilir)
 """
 
 import time
@@ -17,6 +19,8 @@ import streamlit as st
 from analytics import metrics
 from ui.components import kpi_bari
 from ui.charts import grafik_paneli
+from ui import log_stream
+from ui.theme import RENKLER
 
 
 def render(ctx: dict) -> None:
@@ -25,8 +29,7 @@ def render(ctx: dict) -> None:
 
     Parameters
     ----------
-    ctx : dict — render() tarafından iletilen bağlam sözlüğü:
-        - "thread_output" paylaşımlı çıktı dict'i (session_state'e yazılır)
+    ctx : dict — render() tarafından iletilen bağlam sözlüğü.
     """
     if st.session_state.test_calisiyor:
         thread = st.session_state.benchmark_thread
@@ -46,6 +49,9 @@ def render(ctx: dict) -> None:
         # 2x2 Grafik grid
         grafik_paneli()
 
+        # Canlı Log Paneli
+        _log_paneli(canli=True)
+
         if thread and thread.is_alive():
             time.sleep(1.5)
             st.rerun()
@@ -61,5 +67,40 @@ def render(ctx: dict) -> None:
                 st.session_state.karma_sonuc = output["karma_sonuc"]
             st.rerun()
     else:
-        # Test çalışmıyorken boş placeholder grid
+        # Test çalışmıyorken boş placeholder grid + son loglar
         grafik_paneli()
+        _log_paneli(canli=False)
+
+
+def _log_paneli(canli: bool = False) -> None:
+    """
+    Canlı veya geçmiş log kayıtlarını genişletilebilir bir expander içinde gösterir.
+
+    Parameters
+    ----------
+    canli : bool — True ise "Canlı Loglar" başlığı, False ise "Son Loglar"
+    """
+    baslik = "📋 Canlı Loglar" if canli else "📋 Son Loglar"
+    kayitlar = log_stream.son_kayitlar(n=60)
+
+    with st.expander(baslik, expanded=canli):
+        if not kayitlar:
+            st.caption("Henüz log kaydı yok.")
+            return
+
+        # Logları en yeni en üste gelecek şekilde tersine çevir
+        for kayit in reversed(kayitlar):
+            seviye = kayit["seviye"]
+            renk   = log_stream.LOG_SEVIYE_RENK.get(seviye, RENKLER["metin_ikincil"])
+            mesaj  = kayit["mesaj"]
+            st.markdown(
+                f'<span style="color:{renk};font-family:monospace;font-size:12px;">'
+                f'{mesaj}</span>',
+                unsafe_allow_html=True,
+            )
+
+        if canli:
+            col1, _ = st.columns([1, 5])
+            if col1.button("🗑 Logları Temizle", key="log_temizle_btn"):
+                log_stream.temizle()
+                st.rerun()

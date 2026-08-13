@@ -64,6 +64,7 @@ def render() -> None:
     test_adi            = cfg["test_adi"]
     secilen_profil      = cfg["secilen_profil"]
     ozel_ayarlar_kullan = cfg["ozel_ayarlar_kullan"]
+    auto_temizle        = cfg["auto_temizle"]
     karma_mod           = cfg["karma_mod"]
     karma_ayarlar       = cfg["karma_ayarlar"]
     ayarlar             = cfg["ayarlar"]
@@ -144,6 +145,7 @@ def render() -> None:
             secret_key=secret_key, bucket_name=bucket_name,
             test_adi=test_adi, secilen_profil=secilen_profil,
             ozel_ayarlar_kullan=ozel_ayarlar_kullan,
+            auto_temizle=auto_temizle,
             settings=settings,
         ))
 

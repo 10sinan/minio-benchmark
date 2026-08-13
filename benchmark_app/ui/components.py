@@ -84,7 +84,16 @@ def sidebar(settings: dict) -> dict:
             file_size_max_mb = st.number_input("Max (MB)",     min_value=0.0, value=float(file_size_max_mb), step=0.1)
             concurrency      = st.number_input("Concurrency",  min_value=1,  value=int(concurrency),        step=1)
 
-        # ── Benchmark Modu ────────────────────────────────────────────────────
+        # ── Ek Seçenekler ─────────────────────────────────────────────────
+        st.divider()
+        st.markdown("### 🔧 Seçenekler")
+        auto_temizle = st.checkbox(
+            "🧹 Test sonrası bucket'ı otomatik temizle",
+            key="auto_temizle",
+            help="Test tamamlanınca oluşturulan nesneler otomatik olarak silinir.",
+        )
+
+        # ── Benchmark Modu ────────────────────────────────────────────────
         st.divider()
         st.markdown("### 🔀 Benchmark Modu")
         secilen_mod = st.radio(
@@ -138,6 +147,7 @@ def sidebar(settings: dict) -> dict:
         endpoint=endpoint, access_key=access_key, secret_key=secret_key,
         bucket_name=bucket_name, test_adi=test_adi,
         secilen_profil=secilen_profil, ozel_ayarlar_kullan=ozel_ayarlar,
+        auto_temizle=auto_temizle,
         karma_mod=karma_mod, karma_ayarlar=karma_ayarlar,
         ayarlar=dict(
             file_count=int(file_count),
