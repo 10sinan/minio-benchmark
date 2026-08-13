@@ -1,14 +1,11 @@
 """
 ui/charts.py — Canlı İzleme Grafik Bileşenleri.
 
-Bu modül, Streamlit canlı dashboard'unda gösterilen
-2x2 kompakt grafik grid'ini ve yardımcı bileşenleri içerir.
-
 Grafikler:
-  - 🚀 Throughput (MB/s) — Anlık işlem verisinden hesaplanır
-  - ⏱ Latency (ms)      — Anlık istek süreleri scatter plot
-  - 🖥 CPU & RAM (%)    — psutil kaynak izleyiciden
-  - 🌐 Ağ Trafiği       — psutil ağ arayüzü trafiği
+  - Throughput (MB/s) — Anlık işlem verisinden hesaplanır
+  - Latency (ms)      — Anlık istek süreleri scatter plot
+  - CPU & RAM (%)    — psutil kaynak izleyiciden
+  - Ağ Trafiği       — psutil ağ arayüzü trafiği
 """
 
 import pandas as pd
@@ -20,15 +17,8 @@ from analytics import metrics, resource_monitor
 from ui.theme import apply_apple_hig_theme, RENKLER
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 2x2 Kompakt Grafik Grid
-# ──────────────────────────────────────────────────────────────────────────────
-
 def grafik_paneli() -> None:
-    """
-    2x2 kompakt grafik grid'ini çizer.
-    Canlı izleme sekmesinde polling döngüsünde çağrılır.
-    """
+    """2x2 kompakt grafik grid'ini çizer."""
     anlık = metrics.anlık_kopyala()
     res = resource_monitor.get_data()
 
@@ -49,14 +39,10 @@ def grafik_paneli() -> None:
         _ag_trafigi_grafik(res)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Bireysel Grafik Çizimleri
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _throughput_grafik(anlık: list) -> None:
     """Sol Üst: Anlık Throughput (MB/s) çizgi grafiği."""
     if not anlık:
-        _bos_grafik("🚀 Throughput")
+        _bos_grafik("Throughput")
         return
 
     df = pd.DataFrame(anlık)
@@ -75,7 +61,7 @@ def _throughput_grafik(anlık: list) -> None:
         boyutlu, x="zaman_str", y="throughput_mb_s",
         color="islem_tipi", markers=True,
         labels={"zaman_str": "", "throughput_mb_s": "MB/s", "islem_tipi": ""},
-        title="🚀 Throughput",
+        title="Throughput",
     )
     fig.update_layout(
         height=230, margin=dict(l=0, r=0, t=32, b=0),
@@ -87,7 +73,7 @@ def _throughput_grafik(anlık: list) -> None:
 def _latency_grafik(anlık: list) -> None:
     """Sağ Üst: Anlık Latency (ms) scatter grafiği."""
     if not anlık:
-        _bos_grafik("⏱ Latency")
+        _bos_grafik("Latency")
         return
 
     df = pd.DataFrame(anlık)
@@ -97,7 +83,7 @@ def _latency_grafik(anlık: list) -> None:
     fig = px.scatter(
         df, x="zaman_str", y="latency_ms", color="islem_tipi",
         labels={"zaman_str": "", "latency_ms": "ms", "islem_tipi": ""},
-        title="⏱ Latency",
+        title="Latency",
     )
     fig.update_layout(
         height=230, margin=dict(l=0, r=0, t=32, b=0),
@@ -109,7 +95,7 @@ def _latency_grafik(anlık: list) -> None:
 def _cpu_ram_grafik(res: list) -> None:
     """Sol Alt: CPU & RAM (%) çizgi grafiği."""
     if not res:
-        _bos_grafik("🖥 CPU & RAM")
+        _bos_grafik("CPU & RAM")
         return
 
     res_df = pd.DataFrame(res)
@@ -127,7 +113,7 @@ def _cpu_ram_grafik(res: list) -> None:
         line=dict(color=RENKLER["mor"], width=2),
     ))
     fig.update_layout(
-        title="🖥 CPU & RAM", yaxis_title="%",
+        title="CPU & RAM", yaxis_title="%",
         yaxis_range=[0, 100], height=230,
         margin=dict(l=0, r=0, t=32, b=0),
         legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
@@ -138,7 +124,7 @@ def _cpu_ram_grafik(res: list) -> None:
 def _ag_trafigi_grafik(res: list) -> None:
     """Sağ Alt: Ağ Trafiği (MB/s) çizgi grafiği."""
     if not res:
-        _bos_grafik("🌐 Ağ Trafiği")
+        _bos_grafik("Ağ Trafiği")
         return
 
     res_df = pd.DataFrame(res)
@@ -156,7 +142,7 @@ def _ag_trafigi_grafik(res: list) -> None:
         line=dict(color=RENKLER["yesil"], width=2),
     ))
     fig.update_layout(
-        title="🌐 Ağ Trafiği", yaxis_title="MB/s",
+        title="Ağ Trafiği", yaxis_title="MB/s",
         height=230, margin=dict(l=0, r=0, t=32, b=0),
         legend=dict(orientation="h", y=-0.35, font=dict(size=10)),
     )

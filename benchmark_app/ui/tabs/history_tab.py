@@ -1,10 +1,5 @@
 """
-ui/tabs/history_tab.py — 📜 Geçmiş & Karşılaştır Sekmesi.
-
-Özellikler:
-  - Kaydedilmiş tüm testlerin tablo görünümü
-  - Test ismi yeniden adlandırma (rename) paneli
-  - Seçili testleri Throughput / Latency / Metadata grouped bar grafiklerle karşılaştırma
+ui/tabs/history_tab.py — Geçmiş & Karşılaştır Sekmesi.
 """
 
 import pandas as pd
@@ -14,10 +9,6 @@ import streamlit as st
 from analytics import history
 from ui.theme import apply_apple_hig_theme
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Ana Render
-# ──────────────────────────────────────────────────────────────────────────────
 
 def render() -> None:
     """Geçmiş & Karşılaştır Sekmesi içeriğini çizer."""
@@ -32,13 +23,9 @@ def render() -> None:
     _karsilastirma_paneli(gecmis_df)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Alt Bileşenler
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _rename_paneli(gecmis_df: pd.DataFrame) -> None:
     """Test ismini yeniden adlandırma bileşeni."""
-    with st.expander("✏️ Test İsmini Yeniden Adlandır"):
+    with st.expander("Test İsmini Yeniden Adlandır"):
         secilecekler = {
             row["test_id"]: f"{row['test_adi']} ({row['tarih']})"
             for _, row in gecmis_df.iterrows()
@@ -71,11 +58,11 @@ def _gecmis_tablosu(gecmis_df: pd.DataFrame) -> None:
 
 def _karsilastirma_paneli(gecmis_df: pd.DataFrame) -> None:
     """Seçili testler arasında grouped bar grafik karşılaştırması."""
-    st.subheader("📊 Testleri Karşılaştır")
+    st.subheader("Testleri Karşılaştır")
 
     gecmis_df = gecmis_df.copy()
     gecmis_df["etiket"] = (
-        "📌 " + gecmis_df["test_adi"].astype(str) + " (" +
+        gecmis_df["test_adi"].astype(str) + " (" +
         gecmis_df["tarih"].astype(str) + " | " +
         gecmis_df["profil"].astype(str) + ")"
     )
@@ -91,7 +78,6 @@ def _karsilastirma_paneli(gecmis_df: pd.DataFrame) -> None:
     secili = gecmis_df[gecmis_df["etiket"].isin(secimler)].copy()
     secili_label = secili["etiket"].tolist()
 
-    # Throughput & Latency yan yana
     c_tp, c_lat = st.columns(2)
     with c_tp:
         st.caption("Throughput (MB/s)")
@@ -108,7 +94,6 @@ def _karsilastirma_paneli(gecmis_df: pd.DataFrame) -> None:
             "P99":  "p99",
         }, "sn")
 
-    # Metadata & Delete ops/sn (yalnızca veri varsa)
     ops_cols = {
         "ListObjects ops/sn": "list_objects_ops_per_sec",
         "HeadObject ops/sn":  "head_object_ops_per_sec",

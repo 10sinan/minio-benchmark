@@ -1,12 +1,5 @@
 """
 ui/components.py — Paylaşılan UI Bileşenleri.
-
-Bu modül, birden fazla sekme veya render döngüsünde kullanılan
-bileşenleri içerir:
-
-  - KPI Barı (5'li kompakt metrik satırı)
-  - Sidebar (Sol panel: Bağlantı, Test Ayarları, Benchmark Modu, Bucket Klasörleri)
-  - Delete Paneli (Test sonrası silme benchmark bileşeni)
 """
 
 import logging
@@ -20,18 +13,8 @@ from ui.state import delete_thread_fn
 from ui.theme import RENKLER
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# KPI Barı
-# ──────────────────────────────────────────────────────────────────────────────
-
 def kpi_bari(ozet: dict) -> None:
-    """
-    Üst satırda 5 adet kompakt metrik kartı gösterir.
-
-    Parameters
-    ----------
-    ozet : dict  — reporter.ozet_cikar() veya anlık_ozet'ten gelen sözlük
-    """
+    """Üst satırda 5 adet kompakt metrik kartı gösterir."""
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("İşlem",     ozet.get("toplam_dosya", "—"))
     k2.metric("Başarılı",  ozet.get("basarili", "—"))
@@ -40,25 +23,11 @@ def kpi_bari(ozet: dict) -> None:
     k5.metric("P95",        f"{ozet.get('p95', 0):.3f} sn")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Sol Sidebar
-# ──────────────────────────────────────────────────────────────────────────────
-
 def sidebar(settings: dict) -> dict:
-    """
-    Sol sidebar içeriğini oluşturur.
-
-    Parameters
-    ----------
-    settings : dict  — config.yaml'dan yüklenen ayarlar sözlüğü
-
-    Returns
-    -------
-    dict — Tüm sidebar ayarları ve bağlantı bilgilerini içeren sözlük
-    """
+    """Sol sidebar içeriğini oluşturur."""
     with st.sidebar:
         # ── Bağlantı ─────────────────────────────────────────────────────────
-        st.markdown("### ⚙️ Bağlantı")
+        st.markdown("### Bağlantı Ayarları")
         endpoint   = st.text_input("Endpoint URL", placeholder="http://10.0.0.1:9000", key="endpoint")
         access_key = st.text_input("Access Key", key="access_key")
         secret_key = st.text_input("Secret Key", type="password", key="secret_key")
@@ -66,7 +35,7 @@ def sidebar(settings: dict) -> dict:
 
         # ── Test Ayarları ─────────────────────────────────────────────────────
         st.divider()
-        st.markdown("### 🧪 Test Ayarları")
+        st.markdown("### Test Ayarları")
         test_adi = st.text_input("Test Adı", placeholder="Örn: NVMe-Cluster-1", key="test_adi_input")
         profil_isimleri = list(settings["profiles"].keys())
         secilen_profil = st.selectbox("Profil", profil_isimleri, key="secilen_profil")
@@ -84,26 +53,26 @@ def sidebar(settings: dict) -> dict:
             file_size_max_mb = st.number_input("Max (MB)",     min_value=0.0, value=float(file_size_max_mb), step=0.1)
             concurrency      = st.number_input("Concurrency",  min_value=1,  value=int(concurrency),        step=1)
 
-        # ── Ek Seçenekler ─────────────────────────────────────────────────
+        # ── Seçenekler ────────────────────────────────────────────────────
         st.divider()
-        st.markdown("### 🔧 Seçenekler")
+        st.markdown("### Seçenekler")
         auto_temizle = st.checkbox(
-            "🧹 Test sonrası bucket'ı otomatik temizle",
+            "Test sonrası bucket'ı otomatik temizle",
             key="auto_temizle",
             help="Test tamamlanınca oluşturulan nesneler otomatik olarak silinir.",
         )
 
-        # ── Benchmark Modu ────────────────────────────────────────────────
+        # ── Benchmark Modu ────────────────────────────────────────────────────
         st.divider()
-        st.markdown("### 🔀 Benchmark Modu")
+        st.markdown("### Benchmark Modu")
         secilen_mod = st.radio(
             "Benchmark Modu Seçimi",
-            ["📊 Standart", "🔀 Karma İş Yükü"],
+            ["Standart", "Karma İş Yükü"],
             key="benchmark_modu",
             label_visibility="collapsed",
             disabled=st.session_state.test_calisiyor,
         )
-        karma_mod = secilen_mod == "🔀 Karma İş Yükü"
+        karma_mod = secilen_mod == "Karma İş Yükü"
 
         karma_ayarlar = {}
         if karma_mod:
@@ -122,7 +91,7 @@ def sidebar(settings: dict) -> dict:
 
         # ── Bucket Klasörleri ─────────────────────────────────────────────────
         st.divider()
-        st.markdown("### 📁 Bucket Klasörleri")
+        st.markdown("### Bucket Klasörleri")
         if bucket_name and endpoint and access_key and secret_key:
             try:
                 prefixes = s3_utils.list_prefixes(bucket_name, endpoint, access_key, secret_key)
@@ -131,8 +100,8 @@ def sidebar(settings: dict) -> dict:
                 else:
                     for idx, p in enumerate(prefixes):
                         c_isim, c_btn = st.columns([3, 1], vertical_alignment="center")
-                        c_isim.caption(f"📁 {p}")
-                        if c_btn.button("🗑️", key=f"del_{p}_{idx}", help=f"{p} klasörünü sil"):
+                        c_isim.caption(f"{p}")
+                        if c_btn.button("Sil", key=f"del_{p}_{idx}", help=f"{p} klasörünü sil"):
                             if s3_utils.delete_prefix(bucket_name, p, endpoint, access_key, secret_key):
                                 st.success(f"{p} silindi")
                                 st.rerun()
@@ -158,28 +127,14 @@ def sidebar(settings: dict) -> dict:
     )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Delete Paneli
-# ──────────────────────────────────────────────────────────────────────────────
-
 def delete_paneli(prefix: str, endpoint: str, access_key: str,
                   secret_key: str, bucket_name: str) -> None:
-    """
-    Test sonrası 'Sil ve Ölç' (Delete Benchmark) bileşenini gösterir.
-
-    Parametreler
-    ------------
-    prefix      : str — Silinecek S3 test klasör prefixs'i (st.session_state.son_prefix)
-    endpoint    : str — S3 endpoint URL
-    access_key  : str
-    secret_key  : str
-    bucket_name : str
-    """
+    """Test sonrası 'Sil ve Ölç' (Delete Benchmark) bileşenini gösterir."""
     if not prefix:
         return
 
     if st.session_state.delete_calisiyor:
-        st.info("⏳ Delete benchmark devam ediyor…")
+        st.info("Delete benchmark devam ediyor…")
         dt = st.session_state.delete_thread
         if dt and dt.is_alive():
             time.sleep(0.5)
@@ -193,7 +148,7 @@ def delete_paneli(prefix: str, endpoint: str, access_key: str,
                 st.session_state.delete_sonuc = dout["delete_sonuc"]
             st.rerun()
     else:
-        if st.button("🗑️ Sil ve Ölç", key="delete_btn"):
+        if st.button("Sil ve Ölç", key="delete_btn"):
             st.session_state.delete_calisiyor = True
             st.session_state.delete_sonuc = None
             st.session_state.delete_hata  = None

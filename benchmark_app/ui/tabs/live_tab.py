@@ -1,15 +1,12 @@
 """
-ui/tabs/live_tab.py — 📡 Canlı İzleme Sekmesi.
+ui/tabs/live_tab.py — Canlı İzleme Sekmesi.
 
 Test çalışırken:
   - Anlık durum mesajı
   - 5'li KPI barı (anlık sayaçlar)
   - 2x2 kompakt grafik grid (Throughput / Latency / CPU&RAM / Ağ)
   - Thread bitişini izleyerek session_state'i günceller
-  - Canlı Log Paneli (genişletilebilir expander)
-Test çalışmıyorken:
-  - Boş grafik placeholder grid'i gösterir
-  - Son log kayıtları (genişletilebilir)
+  - Canlı Log Paneli
 """
 
 import time
@@ -24,16 +21,10 @@ from ui.theme import RENKLER
 
 
 def render(ctx: dict) -> None:
-    """
-    Canlı İzleme Sekmesi içeriğini çizer.
-
-    Parameters
-    ----------
-    ctx : dict — render() tarafından iletilen bağlam sözlüğü.
-    """
+    """Canlı İzleme Sekmesi içeriğini çizer."""
     if st.session_state.test_calisiyor:
         thread = st.session_state.benchmark_thread
-        st.info(f"⚙️ {metrics.get_status()}")
+        st.info(f"{metrics.get_status()}")
 
         # Anlık KPI barı
         anlık_liste = metrics.anlık_kopyala()
@@ -56,7 +47,6 @@ def render(ctx: dict) -> None:
             time.sleep(1.5)
             st.rerun()
         else:
-            # Thread tamamlandı — sonuçları session_state'e yaz
             st.session_state.test_calisiyor = False
             output = st.session_state.thread_output
             if "hata" in output:
@@ -67,20 +57,13 @@ def render(ctx: dict) -> None:
                 st.session_state.karma_sonuc = output["karma_sonuc"]
             st.rerun()
     else:
-        # Test çalışmıyorken boş placeholder grid + son loglar
         grafik_paneli()
         _log_paneli(canli=False)
 
 
 def _log_paneli(canli: bool = False) -> None:
-    """
-    Canlı veya geçmiş log kayıtlarını genişletilebilir bir expander içinde gösterir.
-
-    Parameters
-    ----------
-    canli : bool — True ise "Canlı Loglar" başlığı, False ise "Son Loglar"
-    """
-    baslik = "📋 Canlı Loglar" if canli else "📋 Son Loglar"
+    """Canlı veya geçmiş log kayıtlarını genişletilebilir bir expander içinde gösterir."""
+    baslik = "Canlı Loglar" if canli else "Son Loglar"
     kayitlar = log_stream.son_kayitlar(n=60)
 
     with st.expander(baslik, expanded=canli):
@@ -88,7 +71,6 @@ def _log_paneli(canli: bool = False) -> None:
             st.caption("Henüz log kaydı yok.")
             return
 
-        # Logları en yeni en üste gelecek şekilde tersine çevir
         for kayit in reversed(kayitlar):
             seviye = kayit["seviye"]
             renk   = log_stream.LOG_SEVIYE_RENK.get(seviye, RENKLER["metin_ikincil"])
@@ -101,6 +83,6 @@ def _log_paneli(canli: bool = False) -> None:
 
         if canli:
             col1, _ = st.columns([1, 5])
-            if col1.button("🗑 Logları Temizle", key="log_temizle_btn"):
+            if col1.button("Logları Temizle", key="log_temizle_btn"):
                 log_stream.temizle()
                 st.rerun()

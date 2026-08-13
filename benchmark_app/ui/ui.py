@@ -2,19 +2,7 @@
 ui/ui.py — Ana Render Orkestratörü.
 
 Bu dosya yalnızca bileşenleri bir araya getiren ince bir orkestratördür.
-Tüm iş mantığı ayrı modüllerde yaşar:
-
-  Bileşen          → Modül
-  ──────────────────────────────────────────
-  Session State    → ui/state.py
-  Sidebar          → ui/components.py
-  KPI Barı         → ui/components.py
-  Sil ve Ölç       → ui/components.py
-  2x2 Grafik Grid  → ui/charts.py
-  Canlı İzleme     → ui/tabs/live_tab.py
-  Detaylar         → ui/tabs/details_tab.py
-  Geçmiş           → ui/tabs/history_tab.py
-  CSS & Plotly     → ui/theme.py
+Tüm iş mantığı ayrı modüllerde yaşar.
 """
 
 import logging
@@ -32,22 +20,16 @@ from ui.tabs import live_tab, details_tab, history_tab
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Ana Render Fonksiyonu
-# ──────────────────────────────────────────────────────────────────────────────
-
 def render() -> None:
     """Streamlit uygulamasını başlatır ve tüm bileşenleri orkestre eder."""
     init_state()
     st.set_page_config(
         page_title="S3 Benchmark",
         layout="wide",
-        page_icon="📐",
         initial_sidebar_state="expanded",
     )
     inject_apple_hig_css()
 
-    # Config dosyasını yükle
     try:
         with open("config.yaml", "r") as f:
             settings = yaml.safe_load(f)
@@ -70,13 +52,13 @@ def render() -> None:
     ayarlar             = cfg["ayarlar"]
 
     # ── Başlık ────────────────────────────────────────────────────────────────
-    st.markdown("## 📐 S3 Benchmark")
+    st.markdown("## S3 Benchmark")
 
     # ── Kontrol Barı ─────────────────────────────────────────────────────────
     cb1, cb2, _cb3, _cb4 = st.columns([1, 1, 1, 6])
-    start_btn = cb1.button("▶ Başlat", type="primary",
+    start_btn = cb1.button("Başlat", type="primary",
                            disabled=st.session_state.test_calisiyor, key="start_btn")
-    stop_btn  = cb2.button("⏹ Durdur",
+    stop_btn  = cb2.button("Durdur",
                            disabled=not st.session_state.test_calisiyor, key="stop_btn")
 
     if stop_btn:
@@ -96,7 +78,6 @@ def render() -> None:
             else:
                 test_prefix = olustur_test_prefix(test_adi)
 
-                # Session state sıfırla
                 st.session_state.update({
                     "test_calisiyor":   True,
                     "benchmark_sonuc":  None,
@@ -133,7 +114,7 @@ def render() -> None:
 
     # ── Sekmeler ──────────────────────────────────────────────────────────────
     tab_canli, tab_detay, tab_gecmis = st.tabs(
-        ["📡 Canlı İzleme", "🔍 Detaylar", "📜 Geçmiş & Karşılaştır"]
+        ["Canlı İzleme", "Detaylar", "Geçmiş & Karşılaştır"]
     )
 
     with tab_canli:

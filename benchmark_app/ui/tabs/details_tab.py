@@ -1,10 +1,10 @@
 """
-ui/tabs/details_tab.py — 🔍 Detaylar Sekmesi.
+ui/tabs/details_tab.py — Detaylar Sekmesi.
 
 Test tamamlandıktan sonra gösterilir:
-  - Standart Benchmark sonuçları (Throughput Bar, Metadata metrikleri, Tablolar)
-  - Karma İş Yükü sonuçları (İşlem Dağılımı Pie, Karma Throughput, CPU/RAM/Ağ)
-  - Her iki mod için: KPI barı, Sil ve Ölç paneli, Geçmişe kaydetme
+  - Standart Benchmark sonuçları
+  - Karma İş Yükü sonuçları
+  - KPI barı, Sil ve Ölç paneli, Geçmişe kaydetme
 """
 
 import threading
@@ -20,20 +20,8 @@ from ui.components import kpi_bari, delete_paneli
 from ui.theme import apply_apple_hig_theme, RENKLER
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Ana Render
-# ──────────────────────────────────────────────────────────────────────────────
-
 def render(ctx: dict) -> None:
-    """
-    Detaylar Sekmesi içeriğini çizer.
-
-    Parameters
-    ----------
-    ctx : dict — Bağlam sözlüğü, render() tarafından aşağıdaki anahtarlarla iletilir:
-        endpoint, access_key, secret_key, bucket_name,
-        secilen_profil, ozel_ayarlar_kullan, test_adi, settings
-    """
+    """Detaylar Sekmesi içeriğini çizer."""
     endpoint    = ctx["endpoint"]
     access_key  = ctx["access_key"]
     secret_key  = ctx["secret_key"]
@@ -49,7 +37,7 @@ def render(ctx: dict) -> None:
 
     elif st.session_state.benchmark_sonuc is not None:
         df, ozet, upload_df, download_df = st.session_state.benchmark_sonuc
-        st.success("✅ Tamamlandı!")
+        st.success("Benchmark Tamamlandı")
         kpi_bari(ozet)
         _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings)
         history.kaydet(
@@ -66,7 +54,7 @@ def render(ctx: dict) -> None:
 
     elif st.session_state.karma_sonuc is not None:
         df, ozet, res_data = st.session_state.karma_sonuc
-        st.success("✅ Karma Tamamlandı!")
+        st.success("Karma Benchmark Tamamlandı")
         kpi_bari(ozet)
         _karma_detay(df, ozet, res_data)
         history.kaydet(
@@ -85,21 +73,14 @@ def render(ctx: dict) -> None:
         st.info("Test tamamlandıktan sonra detaylar burada görünecek.")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Otomatik Temizlik
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _auto_temizle(endpoint, access_key, secret_key, bucket_name, prefix):
-    """
-    Test bitiminde bucket prefix'ini otomatik siler.
-    Yalnızca bir kez çalışır; ikinci renderda session_state bayrağı ile atlanır.
-    """
+    """Test bitiminde bucket prefix'ini otomatik siler."""
     bayrak_key = f"auto_temizlendi_{prefix}"
     if st.session_state.get(bayrak_key):
-        st.success(f"🧹 `{prefix}` otomatik temizlendi.")
+        st.success(f"`{prefix}` otomatik temizlendi.")
         return
 
-    with st.spinner(f"🧹 `{prefix}` otomatik temizleniyor…"):
+    with st.spinner(f"`{prefix}` otomatik temizleniyor…"):
         try:
             sonuc = deleter.benchmark_delete(
                 bucket_name=bucket_name,
@@ -110,14 +91,10 @@ def _auto_temizle(endpoint, access_key, secret_key, bucket_name, prefix):
             )
             st.session_state[bayrak_key] = True
             silinen = sonuc.get("basarili_silinen", 0)
-            st.success(f"🧹 `{prefix}` temizlendi — {silinen} nesne silindi.")
+            st.success(f"`{prefix}` temizlendi — {silinen} nesne silindi.")
         except Exception as e:
             st.error(f"Otomatik temizlik başarısız: {e}")
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Standart Benchmark Detayları
-# ──────────────────────────────────────────────────────────────────────────────
 
 def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
     """Standart benchmark sonuç panelini çizer."""
@@ -125,7 +102,6 @@ def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
     durum  = reporter.durum_degerlendir(ozet, thresholds)
     sozel  = reporter.sozel_ozet(ozet, durum)
 
-    # Throughput Karşılaştırma Bar Grafiği
     tp_data = {
         "Upload":    ozet.get("upload_throughput_mb_s", 0),
         "Download":  ozet.get("download_throughput_mb_s", 0),
@@ -142,7 +118,6 @@ def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
         fig_bar.update_layout(yaxis_title="MB/s", height=250, margin=dict(l=0, r=0, t=10, b=0))
         st.plotly_chart(apply_apple_hig_theme(fig_bar), width="stretch")
 
-    # Metadata metrikleri
     c1, c2 = st.columns(2)
     lo = ozet.get("list_objects_ops_per_sec", 0)
     ho = ozet.get("head_object_ops_per_sec", 0)
@@ -151,8 +126,7 @@ def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
 
     st.caption(sozel)
 
-    # Detay Tabloları
-    with st.expander("📂 Detay Tabloları"):
+    with st.expander("Detay Tabloları"):
         col_u, col_d = st.columns(2)
         with col_u:
             st.caption("Upload")
@@ -171,10 +145,6 @@ def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
                 st.dataframe(mp_df, width="stretch")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Karma İş Yükü Detayları
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _karma_detay(df, ozet, resource_data):
     """Karma İş Yükü sonuç panelini çizer."""
     if not df.empty and "islem_tipi" in df.columns:
@@ -183,7 +153,6 @@ def _karma_detay(df, ozet, resource_data):
 
         col1, col2 = st.columns(2)
 
-        # İşlem Dağılımı Pie
         fig_pie = px.pie(
             dagilim, names="islem_tipi", values="sayi",
             title="İşlem Dağılımı",
@@ -196,7 +165,6 @@ def _karma_detay(df, ozet, resource_data):
         fig_pie.update_layout(height=240, margin=dict(l=0, r=0, t=32, b=0))
         col1.plotly_chart(apply_apple_hig_theme(fig_pie), width="stretch")
 
-        # Karma Throughput Bar
         karma_tp = {k: v for k, v in {
             "Upload":   ozet.get("karma_upload_throughput_mb_s", 0),
             "Download": ozet.get("karma_download_throughput_mb_s", 0),
@@ -217,7 +185,6 @@ def _karma_detay(df, ozet, resource_data):
     if kh:
         st.metric("Karma HeadObject ops/sn", f"{kh:.2f}")
 
-    # Kaynak Kullanımı Grafikleri (test bittikten sonra)
     if resource_data:
         res_df = pd.DataFrame(resource_data)
         res_df["zaman_str"] = pd.to_datetime(res_df["zaman"], unit="s").dt.strftime("%H:%M:%S")
@@ -249,5 +216,5 @@ def _karma_detay(df, ozet, resource_data):
         col4.plotly_chart(apply_apple_hig_theme(fig_net), width="stretch")
 
     if not df.empty:
-        with st.expander("Ham veri tablosu"):
+        with st.expander("Ham Veri Tablosu"):
             st.dataframe(df, width="stretch")
