@@ -1,0 +1,7 @@
+{
+    "python.testing.pytestArgs": [
+        "benchmark_app"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
