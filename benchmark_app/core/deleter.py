@@ -45,6 +45,7 @@ def _s3_client(endpoint_url, access_key, secret_key):
             request_checksum_calculation="when_required",
             response_checksum_validation="when_required",
             max_pool_connections=50,
+            retries={"max_attempts": 5, "mode": "adaptive"},
         ),
     )
     s3.meta.events.register("before-sign.s3.DeleteObjects", _add_content_md5)

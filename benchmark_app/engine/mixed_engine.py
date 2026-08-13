@@ -30,6 +30,7 @@ def _s3_client(endpoint_url: str, access_key: str, secret_key: str):
             request_checksum_calculation="when_required",
             response_checksum_validation="when_required",
             max_pool_connections=100,
+            retries={"max_attempts": 5, "mode": "adaptive"},
         ),
     )
 
@@ -205,6 +206,7 @@ def _prefix_keylerini_listele(
             request_checksum_calculation="when_required",
             response_checksum_validation="when_required",
             max_pool_connections=10,
+            retries={"max_attempts": 5, "mode": "adaptive"},
         ),
     )
     prefix_tam = prefix if prefix.endswith("/") else f"{prefix}/"

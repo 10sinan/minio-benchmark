@@ -9,6 +9,7 @@ import logging
 from core import generator, uploader
 from analytics import metrics, reporter, resource_monitor
 from engine.standard_engine import run_benchmark
+from engine.sweep_engine import run_concurrency_sweep
 from engine.mixed_engine import (
     run_mixed_benchmark as _run_mixed_engine,
     _prefix_keylerini_listele,
@@ -129,4 +130,5 @@ def run_mixed_benchmark(
 __all__ = [
     "run_benchmark",
     "run_mixed_benchmark",
+    "run_concurrency_sweep",
 ]
