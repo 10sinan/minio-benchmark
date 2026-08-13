@@ -314,6 +314,9 @@ def inject_apple_hig_css() -> None:
             background: rgba(18, 18, 20, 0.95) !important;
             backdrop-filter: blur(20px) !important;
             border-right: 0.5px solid {RENKLER["separator"]} !important;
+            border-top-right-radius: 16px !important;
+            border-bottom-right-radius: 16px !important;
+            overflow: hidden !important;
             padding-top: 0 !important;
         }}
         [data-testid="stSidebar"] > div:first-child {{
@@ -358,6 +361,46 @@ def inject_apple_hig_css() -> None:
         hr {{
             margin: 10px 0 !important;
         }}
+        
+        /* ── Hiyerarşik Düzen (Div Wrappers) ─────────────── */
+        .app-dashboard-container {{
+            padding: 10px;
+        }}
+        
+        .kpi-bar-wrapper {{
+            margin-bottom: 20px;
+        }}
+        
+        .charts-section-wrapper {{
+            background: {RENKLER["bg_panel"]} !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            border: 1px solid {RENKLER["kenar"]} !important;
+            border-radius: 16px !important;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 24px {RENKLER["golge"]}, inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        }}
+        
+        .charts-row {{
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }}
+        
+        .charts-row:last-child {{
+            margin-bottom: 0;
+        }}
+        
+        .chart-card {{
+            flex: 1;
+            min-width: 0;
+        }}
+        
+        .log-section-wrapper {{
+            margin-top: 20px;
+        }}
+        
         </style>
         """,
         unsafe_allow_html=True,

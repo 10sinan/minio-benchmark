@@ -25,18 +25,22 @@ def grafik_paneli() -> None:
     col1, col2 = st.columns(2)
 
     with col1:
-        _throughput_grafik(anlık)
+        with st.container(border=True):
+            _throughput_grafik(anlık)
 
     with col2:
-        _latency_grafik(anlık)
+        with st.container(border=True):
+            _latency_grafik(anlık)
 
     col3, col4 = st.columns(2)
 
     with col3:
-        _cpu_ram_grafik(res)
+        with st.container(border=True):
+            _cpu_ram_grafik(res)
 
     with col4:
-        _ag_trafigi_grafik(res)
+        with st.container(border=True):
+            _ag_trafigi_grafik(res)
 
 
 def _throughput_grafik(anlık: list) -> None:
