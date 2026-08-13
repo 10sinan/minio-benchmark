@@ -1,7 +1,7 @@
 """
-downloader.py — Paralel dosya indirme modülü.
+downloader.py
 
-Değişiklik: metrics.set_status ile aşama bildirimi eklendi.
+S3'teki dosyaları paralel olarak indirir ve her işlemin süresini kaydeder.
 """
 import os
 import time
@@ -68,7 +68,7 @@ def download_files(
     dosyalar = []
     if "Contents" in response:
         for obj in response["Contents"]:
-            # Yalnızca ana yükleme dosyaları indirilsin, _mp kopyaları değil
+            # _mp uzantılı nesneler multipart kopya; indirilmesine gerek yok
             if not obj["Key"].endswith("_mp"):
                 dosyalar.append({"key": obj["Key"], "boyut_byte": obj["Size"]})
 

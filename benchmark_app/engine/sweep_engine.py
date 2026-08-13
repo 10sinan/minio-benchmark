@@ -1,8 +1,8 @@
 """
-engine/sweep_engine.py — Concurrency Sweep Motoru.
+engine/sweep_engine.py
 
-Farklı thread (concurrency) seviyelerinde standart benchmark akışını
-otomatik olarak tekrar tekrar çalıştırarak sistemin darboğaz noktasını (bottleneck) bulur.
+1'den 32'ye kadar farklı thread sayılarını deneyerek sistemin nerede
+doyuma ulaştığını (kapasite sınırını) otomatik olarak bulur.
 """
 import logging
 import pandas as pd
@@ -22,12 +22,11 @@ def run_concurrency_sweep(
     iptal_kontrol=None,
 ):
     """
-    Belirtilen thread seviyelerinde (1, 2, 4, 8, 16, 32) sırasıyla
-    standart benchmark testini çalıştırır.
+    [1, 2, 4, 8, 16, 32] thread seviyelerinde sırayla standart testi çalıştırır.
 
     Returns
     -------
-    pd.DataFrame : Her bir concurrency seviyesinin performans özetlerini içeren tablo.
+    pd.DataFrame : Her concurrency seviyesinin performans özetini içeren tablo.
     """
     sweep_levels = [1, 2, 4, 8, 16, 32]
     ozetler = []
@@ -38,16 +37,14 @@ def run_concurrency_sweep(
             break
 
         logging.info(f"Sweep çalıştırılıyor: Concurrency = {level}")
-        
-        # Ayarları o anki thread sayısına göre güncelle
+
         ayarlar_kopya = ayarlar.copy()
         ayarlar_kopya["concurrency"] = level
 
-        # Klasörlerin birbiriyle çakışmaması için prefix'e thread sayısını ekle
+        # Her seviye farklı prefix kullanır; S3'teki nesneler birbirine karışmaz
         prefix = f"{test_prefix_base}_c{level}"
 
-        # Standart benchmark'ı çalıştır
-        _, ozet, _, _ = standard_engine.run_benchmark(
+        _, ozet, _, _, _ = standard_engine.run_benchmark(
             ayarlar=ayarlar_kopya,
             endpoint=endpoint,
             access_key=access_key,
@@ -59,7 +56,7 @@ def run_concurrency_sweep(
             iptal_kontrol=iptal_kontrol,
         )
 
-        # Hangi thread seviyesinde koştuğunu özete ekleyelim
+        # Hangi thread seviyesinde koştuğunu özete ekle
         ozet_kopya = ozet.copy()
         ozet_kopya["concurrency"] = level
         ozetler.append(ozet_kopya)

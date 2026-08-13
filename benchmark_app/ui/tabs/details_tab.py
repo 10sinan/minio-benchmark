@@ -36,9 +36,10 @@ def render(ctx: dict) -> None:
         st.error(f"Hata: {st.session_state.benchmark_hata}")
 
     elif st.session_state.benchmark_sonuc is not None:
-        df, ozet, upload_df, download_df = st.session_state.benchmark_sonuc
+        df, ozet, upload_df, download_df, res_data = st.session_state.benchmark_sonuc
         st.success("Benchmark Tamamlandı")
         kpi_bari(ozet)
+        _darbogaz_karti(df, ozet, res_data)
         _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings)
         history.kaydet(
             profil_adi=secilen_profil if not ozel_ayarlar_kullan else "özel",
@@ -56,6 +57,7 @@ def render(ctx: dict) -> None:
         df, ozet, res_data = st.session_state.karma_sonuc
         st.success("Karma Benchmark Tamamlandı")
         kpi_bari(ozet)
+        _darbogaz_karti(df, ozet, res_data)
         _karma_detay(df, ozet, res_data)
         history.kaydet(
             profil_adi=f"karma_{secilen_profil}" if not ozel_ayarlar_kullan else "karma_özel",
@@ -116,7 +118,7 @@ def _standart_detay(df, ozet, upload_df, download_df, secilen_profil, settings):
             text=[f"{v:.2f}" for v in tp_data.values()], textposition="outside",
         ))
         fig_bar.update_layout(yaxis_title="MB/s", height=250, margin=dict(l=0, r=0, t=10, b=0))
-        st.plotly_chart(apply_apple_hig_theme(fig_bar), width="stretch")
+        st.plotly_chart(apply_apple_hig_theme(fig_bar), use_container_width=True)
 
     c1, c2 = st.columns(2)
     lo = ozet.get("list_objects_ops_per_sec", 0)
@@ -218,3 +220,22 @@ def _karma_detay(df, ozet, resource_data):
     if not df.empty:
         with st.expander("Ham Veri Tablosu"):
             st.dataframe(df, width="stretch")
+
+
+def _darbogaz_karti(df, ozet, res_data):
+    """Sistem analizini ve darboğaz raporunu şık bir kart içinde gösterir."""
+    rapor_listesi = reporter.darbogaz_analizi_yap(df, ozet, res_data)
+    
+    st.markdown("### Sistem Analizi ve Darboğaz Raporu")
+    with st.container(border=True):
+        for r in rapor_listesi:
+            seviye = r["seviye"]
+            mesaj = r["mesaj"]
+            if seviye == "error":
+                st.error(mesaj)
+            elif seviye == "warning":
+                st.warning(mesaj)
+            elif seviye == "success":
+                st.success(mesaj)
+            else:
+                st.info(mesaj)

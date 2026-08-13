@@ -1,8 +1,8 @@
 """
-engine/actions.py — Benchmark Orkestrasyon Katmanı.
+engine/actions.py
 
-Bu modül, alt motorları (standard_engine, mixed_engine) tek bir arayüz
-altında toplar. Dışarıdan yalnızca bu dosya import edilir.
+Karma İş Yükü testini yönetir. Standart ve sweep testleri
+burada değil, kendi motorlarından doğrudan dışa açılır.
 """
 import logging
 
@@ -29,7 +29,7 @@ def run_mixed_benchmark(
     iptal_kontrol=None,
 ):
     """
-    Karma İş Yükü benchmark akışını çalıştırır.
+    Karma iş yükü testini baştan sona çalıştırır.
 
     Parameters
     ----------
@@ -44,7 +44,6 @@ def run_mixed_benchmark(
     Returns
     -------
     tuple : (df, ozet, resource_data)
-        resource_data: list[dict] — CPU/RAM/Ağ anlık görüntüleri
     """
     metrics.kuyrugu_temizle()
     resource_monitor.temizle()
@@ -55,7 +54,17 @@ def run_mixed_benchmark(
         karma_ayarlar.get("sure_sn", 60),
     )
 
-    # ── Adım 1: Dosya üretimi ────────────────────────────────────────────────
+    # İstenirse ısınma evresi çalıştırılır ve metrikleri temizlenir
+    from engine.standard_engine import _isinma_evresi_calistir
+    isinma = ayarlar.get("isinma_evresi", False)
+    if isinma:
+        _isinma_evresi_calistir(
+            endpoint, access_key, secret_key, bucket_name, test_prefix + "_warmup"
+        )
+        if iptal_kontrol and iptal_kontrol():
+            return _karma_bos_sonuc()
+
+    # ── 1. Dosya üretimi ──────────────────────────────────────────────────────
     metrics.set_status("Dosyalar üretiliyor…")
     generator.generate_files(
         folder_path=folder_path,
@@ -67,7 +76,8 @@ def run_mixed_benchmark(
     if iptal_kontrol and iptal_kontrol():
         return _karma_bos_sonuc()
 
-    # ── Adım 2: Setup upload — nesne havuzu oluştur (metriklere dahil değil) ─
+    # ── 2. Nesne havuzu hazırlama ─────────────────────────────────────────────
+    # Bu yükleme karma fazının metriklerine dahil edilmez; sadece S3'te dosya oluşturur
     metrics.set_status("Nesne havuzu hazırlanıyor (setup upload)…")
     uploader.upload_files(
         folder_path=folder_path,
@@ -83,20 +93,20 @@ def run_mixed_benchmark(
     if iptal_kontrol and iptal_kontrol():
         return _karma_bos_sonuc()
 
-    # Setup upload metriklerini temizle — sadece karma fazını ölç
+    # Setup yüklemesinin metriklerini temizle; sadece karma fazı ölçülecek
     metrics.kuyrugu_temizle()
 
-    # ── Adım 3: Mevcut nesne anahtarlarını listele ───────────────────────────
+    # ── 3. Karma fazda kullanılacak nesne listesini al ────────────────────────
     metrics.set_status("Nesne listesi alınıyor…")
     mevcut_keyler = _prefix_keylerini_listele(
         bucket_name, endpoint, access_key, secret_key, test_prefix
     )
     logging.info("Karma benchmark için %d mevcut nesne hazır.", len(mevcut_keyler))
 
-    # ── Adım 4: Kaynak izleyiciyi başlat ─────────────────────────────────────
+    # ── 4. Kaynak izlemeyi başlat ─────────────────────────────────────────────
     resource_monitor.baslat(aralik_sn=0.5)
 
-    # ── Adım 5: Karma iş yükü motoru ─────────────────────────────────────────
+    # ── 5. Karma iş yükü ─────────────────────────────────────────────────────
     try:
         _run_mixed_engine(
             bucket_name=bucket_name,
@@ -114,7 +124,7 @@ def run_mixed_benchmark(
             iptal_kontrol=iptal_kontrol,
         )
     finally:
-        # ── Adım 6: Kaynak izleyiciyi durdur (hata olsa bile) ────────────────
+        # Hata olsa bile izleyiciyi kapat
         resource_monitor.durdur()
 
     resource_data = resource_monitor.get_data()

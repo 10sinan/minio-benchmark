@@ -247,3 +247,58 @@ def terminalde_goster(df, ozet):
             f"Head ops/sn: {ozet.get('head_object_ops_per_sec', 0):.2f} | "
             f"Delete ops/sn: {ozet.get('delete_ops_per_sec', 0):.2f}"
         )
+
+
+def darbogaz_analizi_yap(df, ozet, resource_data):
+    """
+    Sistem kaynaklarını ve test özetini inceleyerek olası darboğazları (bottleneck) tespit eder.
+    Dönen liste şu formattadır: [{"seviye": "error|warning|info", "mesaj": "..."}]
+    """
+    rapor = []
+    
+    # 1. Hata Oranı Kontrolü
+    basari_orani = ozet.get("basari_orani", 100)
+    if basari_orani < 95.0:
+        rapor.append({
+            "seviye": "error",
+            "mesaj": f"Yüksek Hata Oranı: İsteklerin %{100 - basari_orani:.1f}'si başarısız oldu. Sunucu aşırı yüklenmiş veya kimlik bilgileri hatalı olabilir."
+        })
+        
+    # 2. CPU ve RAM Kontrolü
+    if resource_data and len(resource_data) > 0:
+        cpu_avg = sum(r.get("cpu", 0) for r in resource_data) / len(resource_data)
+        ram_avg = sum(r.get("ram_percent", 0) for r in resource_data) / len(resource_data)
+        
+        if cpu_avg > 85.0:
+            rapor.append({
+                "seviye": "error",
+                "mesaj": f"İstemci CPU Darboğazı: Ortalama CPU kullanımı %{cpu_avg:.1f}. İşlemci test yükünü kaldırmakta zorlanıyor."
+            })
+        elif cpu_avg > 70.0:
+            rapor.append({
+                "seviye": "warning",
+                "mesaj": f"Yüksek İstemci CPU: Ortalama CPU kullanımı %{cpu_avg:.1f} seviyesinde."
+            })
+            
+        if ram_avg > 85.0:
+            rapor.append({
+                "seviye": "error",
+                "mesaj": f"İstemci RAM Darboğazı: Ortalama RAM kullanımı %{ram_avg:.1f}. İstemci makinesinde yeterli bellek yok."
+            })
+            
+    # 3. Gecikme (Latency) Kontrolü
+    p95 = ozet.get("p95", 0)
+    if p95 > 2.0:
+        rapor.append({
+            "seviye": "warning",
+            "mesaj": f"Yüksek Gecikme: P95 gecikmesi {p95:.2f} saniye. Ağ veya sunucu yanıt verme süresi çok yavaş."
+        })
+        
+    # Her şey yolundaysa
+    if not rapor:
+        rapor.append({
+            "seviye": "success",
+            "mesaj": "Sistem Sağlıklı: Belirgin bir istemci (client) darboğazı veya yüksek hata oranına rastlanmadı."
+        })
+        
+    return rapor

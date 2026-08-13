@@ -1,8 +1,8 @@
 """
-metrics.py — Thread-safe metrik toplayıcı.
+metrics.py
 
-Tek bir global liste ve Lock kullanır. Benchmark thread'i veri yazarken
-Streamlit UI thread'i listeyi tüketmeden okuyabilir (canlı grafik için).
+Thread-safe metrik toplayıcı. Benchmark thread'i veri yazarken
+Streamlit UI thread'i aynı anda okuyabilir; kilitlenme olmaz.
 """
 import threading
 import time
@@ -13,7 +13,7 @@ _status: str = "Hazır"
 
 
 # ---------------------------------------------------------------------------
-# Durum Yönetimi
+# Durum Mesajı
 # ---------------------------------------------------------------------------
 
 def set_status(durum: str) -> None:
@@ -26,11 +26,11 @@ def get_status() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Metrik Yazma / Okuma
+# Metrik Kayıt ve Okuma
 # ---------------------------------------------------------------------------
 
 def kuyrugu_temizle() -> None:
-    """Yeni bir test başlamadan önce önceki metrikleri temizler."""
+    """Yeni bir test veya ısınma evresi başlamadan önce önceki verileri siler."""
     with _lock:
         _metrikler.clear()
 
@@ -44,17 +44,17 @@ def kaydet(
     zaman: float | None = None,
 ) -> None:
     """
-    Tek bir işlem sonucunu thread-safe şekilde kaydeder.
+    Bir işlem sonucunu güvenli şekilde listeye ekler.
 
     Parameters
     ----------
-    dosya_adi   : Dosya adı veya nesne anahtarı
+    dosya_adi   : Dosya adı veya S3 nesne anahtarı
     sure        : İşlem süresi (saniye)
     basarili    : Başarı durumu
     islem_tipi  : 'upload', 'download', 'multipart_upload',
                   'list_objects', 'head_object', 'delete'
     boyut_byte  : Nesne boyutu (byte), varsa
-    zaman       : Unix timestamp (varsayılan: şimdiki an)
+    zaman       : Unix timestamp; verilmezse şimdiki an kullanılır
     """
     if zaman is None:
         zaman = time.time()
@@ -73,8 +73,8 @@ def kaydet(
 
 def anlık_kopyala() -> list:
     """
-    UI thread'inin canlı grafik çizmesi için mevcut metrik listesinin
-    kopyasını döndürür. Listeyi tüketmez (kuyruğun aksine).
+    Canlı grafik için mevcut metrik listesinin anlık kopyasını döndürür.
+    Listeyi temizlemez; sadece okur.
     """
     with _lock:
         return list(_metrikler)
@@ -82,7 +82,7 @@ def anlık_kopyala() -> list:
 
 def tum_sonuclari_al() -> list:
     """
-    Benchmark tamamlandıktan sonra tüm metriklerin kopyasını döndürür.
-    Geriye uyumluluk için `anlık_kopyala` ile aynı davranışı gösterir.
+    Test bittikten sonra tüm metrikleri döndürür.
+    Geriye uyumluluk için anlık_kopyala ile aynı davranışı gösterir.
     """
     return anlık_kopyala()

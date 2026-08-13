@@ -1,9 +1,9 @@
 """
-uploader.py — Dosya yükleme ve Multipart Upload kıyaslaması.
+uploader.py
 
-100 MB ve üzeri dosyalar için hem standart PutObject (tek parça)
-hem de Multipart Upload gerçekleştirilir; her ikisi de metrics'e
-farklı islem_tipi ile kaydedilir.
+Dosyaları S3'e paralel olarak yükler.
+100 MB ve üzeri dosyalar için hem standart PutObject hem de Multipart Upload
+çalıştırılır; ikisi de ayrı ayrı ölçülür.
 """
 import os
 import time
@@ -15,10 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from analytics import metrics
 
-# 100 MB eşiği (bayt cinsinden)
+# 100 MB üstü dosyalar için multipart da çalışır
 MULTIPART_ESIK_BYTE = 100 * 1024 * 1024
 
-# Multipart parça boyutu: 8 MB
+# Her multipart parçasının boyutu: 8 MB
 MULTIPART_PARCA_BYTE = 8 * 1024 * 1024
 
 
@@ -39,18 +39,18 @@ def _s3_client(endpoint_url, access_key, secret_key):
 
 def upload_single_file(s3, folder_path, bucket_name, dosya_adi, prefix=None):
     """
-    Tek bir dosyayı yükler.
-    - 100 MB altı → standart upload_file (PutObject)
-    - 100 MB ve üzeri → hem PutObject hem Multipart Upload (kıyaslama)
+    Tek bir dosyayı yükler ve süreyi kaydeder.
+    100 MB+ dosyalar için ek olarak Multipart Upload da yapılır (kıyaslama amaçlı).
     """
     tam_yol = os.path.join(folder_path, dosya_adi)
     boyut_byte = os.path.getsize(tam_yol)
     key = f"{prefix}/{dosya_adi}" if prefix else dosya_adi
 
-    # ── Standart PutObject ──────────────────────────────────────────────────
-    # TransferConfig ile multipart eşiğini çok yüksek tutarak tek parça zorunlu kılıyoruz
+    # ── Standart PutObject ────────────────────────────────────────────────────
+    # Eşiği 5 GB'a çekerek boto3'ün otomatik multipart'ını devre dışı bırakıyoruz;
+    # böylece bu çağrı her zaman tek parça PutObject gönderir
     cfg_tek = TransferConfig(
-        multipart_threshold=5 * 1024 * 1024 * 1024,  # 5 GB → pratikte hep tek parça
+        multipart_threshold=5 * 1024 * 1024 * 1024,
         use_threads=False,
     )
     t0 = time.perf_counter()
@@ -71,7 +71,7 @@ def upload_single_file(s3, folder_path, bucket_name, dosya_adi, prefix=None):
     )
     logging.info("PutObject: %s (prefix=%s), süre: %.4f sn", dosya_adi, prefix, sure_tek)
 
-    # ── Multipart Upload (yalnızca 100 MB+ dosyalar için kıyaslama) ─────────
+    # ── Multipart Upload (yalnızca 100 MB+ dosyalar için) ─────────────────────
     if boyut_byte >= MULTIPART_ESIK_BYTE:
         key_mp = f"{key}_mp"
         cfg_mp = TransferConfig(

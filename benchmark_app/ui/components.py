@@ -61,6 +61,12 @@ def sidebar(settings: dict) -> dict:
             key="auto_temizle",
             help="Test tamamlanınca oluşturulan nesneler otomatik olarak silinir.",
         )
+        isinma_evresi = st.checkbox(
+            "Isınma Evresi (Warm-up)",
+            key="isinma_evresi",
+            value=True,
+            help="Asıl benchmark başlamadan önce disk ve ağ bağlantılarını ısıtmak için 3 saniyelik bir ön test yapılır. Isınma verileri ana istatistiklere katılmaz.",
+        )
 
         # ── Benchmark Modu ────────────────────────────────────────────────────
         st.divider()
@@ -148,7 +154,7 @@ def sidebar(settings: dict) -> dict:
         endpoint=endpoint, access_key=access_key, secret_key=secret_key,
         bucket_name=bucket_name, test_adi=test_adi,
         secilen_profil=secilen_profil, ozel_ayarlar_kullan=ozel_ayarlar,
-        auto_temizle=auto_temizle,
+        auto_temizle=auto_temizle, isinma_evresi=isinma_evresi,
         karma_mod=karma_mod, karma_ayarlar=karma_ayarlar,
         sweep_mod=sweep_mod, matrix_mod=matrix_mod, matrix_ayarlari=matrix_ayarlari,
         ayarlar=dict(

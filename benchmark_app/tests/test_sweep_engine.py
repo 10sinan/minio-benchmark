@@ -19,6 +19,7 @@ def test_run_concurrency_sweep(mock_run_benchmark):
         {"toplam_dosya": 10, "toplam_throughput_mb_s": 50.0},
         pd.DataFrame(),
         pd.DataFrame(),
+        [],
     )
 
     ayarlar = {"file_count": 10}

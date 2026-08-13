@@ -24,7 +24,11 @@ def render(ctx: dict) -> None:
     """Canlı İzleme Sekmesi içeriğini çizer."""
     if st.session_state.test_calisiyor:
         thread = st.session_state.benchmark_thread
-        st.info(f"{metrics.get_status()}")
+        status_msg = metrics.get_status()
+        if "Isınma" in status_msg:
+            st.warning(status_msg)
+        else:
+            st.info(status_msg)
 
         # Anlık KPI barı
         anlık_liste = metrics.anlık_kopyala()

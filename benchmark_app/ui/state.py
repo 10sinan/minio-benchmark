@@ -1,10 +1,8 @@
 """
-ui/state.py — Streamlit Session State ve Thread Yöneticisi.
+ui/state.py
 
-Bu modül:
-  - Oturum durumu (session_state) başlatma
-  - Benchmark ve Delete thread hedef fonksiyonları
-  - Test prefix oluşturma yardımcısı
+Session state başlatma ve tüm benchmark thread fonksiyonları burada.
+Her thread, sonucu output_dict üzerinden ana UI'a iletir.
 """
 
 import logging
@@ -19,11 +17,11 @@ from core import deleter
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Session State Başlatma
+# Session State
 # ──────────────────────────────────────────────────────────────────────────────
 
 def init_state() -> None:
-    """Streamlit session_state içindeki tüm uygulama değişkenlerini başlatır."""
+    """Sayfa yüklendiğinde henüz tanımlanmamış session değişkenlerini başlatır."""
     defaults = {
         "iptal_event": threading.Event(),
         "test_calisiyor": False,
@@ -48,19 +46,19 @@ def init_state() -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Thread Hedef Fonksiyonları
+# Thread Fonksiyonları
 # ──────────────────────────────────────────────────────────────────────────────
 
 def benchmark_thread_fn(ayarlar, endpoint, access_key, secret_key,
                         bucket_name, test_prefix, matrix_ayarlari, iptal_kontrol, output_dict):
-    """Standart benchmark thread'inin hedef fonksiyonu."""
+    """Standart testi arka planda çalıştırır; sonucu output_dict'e yazar."""
     try:
-        df, ozet, upload_df, download_df = actions.run_benchmark(
+        df, ozet, upload_df, download_df, res_data = actions.run_benchmark(
             ayarlar=ayarlar, endpoint=endpoint, access_key=access_key,
             secret_key=secret_key, bucket_name=bucket_name,
             test_prefix=test_prefix, matrix_ayarlari=matrix_ayarlari, iptal_kontrol=iptal_kontrol,
         )
-        output_dict["sonuc"] = (df, ozet, upload_df, download_df)
+        output_dict["sonuc"] = (df, ozet, upload_df, download_df, res_data)
         output_dict["mod"] = "standart"
     except Exception as e:
         logging.exception("Standart benchmark hatası: %s", e)
@@ -69,7 +67,7 @@ def benchmark_thread_fn(ayarlar, endpoint, access_key, secret_key,
 
 def karma_thread_fn(ayarlar, endpoint, access_key, secret_key,
                     bucket_name, test_prefix, karma_ayarlar, iptal_kontrol, output_dict):
-    """Karma İş Yükü benchmark thread'inin hedef fonksiyonu."""
+    """Karma iş yükü testini arka planda çalıştırır."""
     try:
         df, ozet, res_data = actions.run_mixed_benchmark(
             ayarlar=ayarlar, endpoint=endpoint, access_key=access_key,
@@ -86,7 +84,7 @@ def karma_thread_fn(ayarlar, endpoint, access_key, secret_key,
 
 def sweep_thread_fn(ayarlar, endpoint, access_key, secret_key,
                     bucket_name, test_prefix_base, iptal_kontrol, output_dict):
-    """Sweep benchmark thread'inin hedef fonksiyonu."""
+    """Concurrency sweep testini arka planda çalıştırır."""
     try:
         sweep_df = actions.run_concurrency_sweep(
             ayarlar=ayarlar, endpoint=endpoint, access_key=access_key,
@@ -101,7 +99,7 @@ def sweep_thread_fn(ayarlar, endpoint, access_key, secret_key,
 
 
 def delete_thread_fn(endpoint, access_key, secret_key, bucket_name, prefix, output_dict):
-    """Delete benchmark thread'inin hedef fonksiyonu."""
+    """Delete benchmark'ını arka planda çalıştırır."""
     try:
         sonuc = deleter.benchmark_delete(
             bucket_name=bucket_name, endpoint_url=endpoint,
@@ -119,11 +117,10 @@ def delete_thread_fn(endpoint, access_key, secret_key, bucket_name, prefix, outp
 
 def olustur_test_prefix(test_adi: str) -> str:
     """
-    Kullanıcının verdiği test adından S3 uyumlu bir prefix üretir.
+    Kullanıcının girdiği test adından S3 uyumlu bir prefix üretir.
 
-    - Özel karakterler ve boşluklar alt çizgiye çevrilir.
-    - Sonuna 6 karakterlik kısa UUID eklenir (çakışmayı önlemek için).
-    - Test adı boşsa rastgele bir prefix üretilir.
+    Özel karakterler alt çizgiye dönüşür ve sonuna kısa bir UUID eklenir.
+    Test adı boşsa tamamen rastgele bir prefix oluşturulur.
     """
     temiz = re.sub(r"[^a-zA-Z0-9_-]", "_", test_adi.strip()).strip("_") if test_adi and test_adi.strip() else ""
     if temiz:
